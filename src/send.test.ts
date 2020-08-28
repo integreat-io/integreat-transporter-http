@@ -1,18 +1,12 @@
 import test from 'ava'
 import nock = require('nock')
 import transporter from '.'
-import { Exchange } from 'integreat'
 
 import send from './send'
 
 // Setup
 
-const createEndpoint = (options: Record<string, unknown>) => ({
-  options: transporter.prepareOptions(options),
-  mutateRequest: (exchange: Exchange) => exchange,
-  mutateResponse: (exchange: Exchange) => exchange,
-  isMatch: () => false,
-})
+const { prepareOptions } = transporter
 
 test.after.always(() => {
   nock.restore()
@@ -33,7 +27,9 @@ test('should send data and return status and data', async (t) => {
     request: { type: 'entry', data },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json1.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json1.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -53,7 +49,9 @@ test('should use GET method as default when no data', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json2.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json2.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -76,7 +74,9 @@ test('should convert all non-string data to JSON', async (t) => {
     request: { type: 'entry', data },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json18.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json18.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -97,7 +97,7 @@ test('should use method from endpoint', async (t) => {
     request: { type: 'entry', data },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       uri: 'http://json3.test/entries/ent1',
       method: 'POST' as const,
     }),
@@ -121,7 +121,7 @@ test('should support base url', async (t) => {
     request: { type: 'entry', data: '{"id":"ent1","title":"Entry 1"}' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       baseUri: 'http://json19.test/',
       uri: '/entries/ent1',
     }),
@@ -144,7 +144,7 @@ test('should set query params from options', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       baseUri: 'http://json20.test',
       uri: '/entries',
       queryParams: {
@@ -172,7 +172,7 @@ test('should encode query params correctly', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       baseUri: 'http://json21.test',
       uri: '/entries',
       queryParams: {
@@ -203,7 +203,7 @@ test('should force query param values to string', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       baseUri: 'http://json22.test',
       uri: '/entries',
       queryParams: {
@@ -231,7 +231,7 @@ test('should exclude query params with undefined value', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       baseUri: 'http://json23.test',
       uri: '/entries',
       queryParams: {
@@ -258,7 +258,7 @@ test('should set query params from options when uri has query string', async (t)
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       baseUri: 'http://json17.test',
       uri: '/entries?page=1',
       queryParams: { order: 'desc' },
@@ -282,7 +282,9 @@ test('should return ok status on all 200-range statuses', async (t) => {
     request: { type: 'entry', data },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json4.test/entries/ent2' }),
+    options: prepareOptions({
+      uri: 'http://json4.test/entries/ent2',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -299,7 +301,9 @@ test('should return error on not found', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json5.test/entries/unknown' }),
+    options: prepareOptions({
+      uri: 'http://json5.test/entries/unknown',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -320,7 +324,9 @@ test('should return error on other error', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json6.test/entries/error' }),
+    options: prepareOptions({
+      uri: 'http://json6.test/entries/error',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -343,7 +349,9 @@ test('should return error on request error', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json7.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json7.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -360,7 +368,9 @@ test('should respond with badrequest on 400', async (t) => {
     response: {},
     auth: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json8.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json8.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -378,7 +388,9 @@ test('should respond with timeout on 408', async (t) => {
     response: {},
     auth: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json9.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json9.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -396,7 +408,9 @@ test('should reject on 401 with auth', async (t) => {
     response: {},
     auth: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json10.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json10.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -414,7 +428,9 @@ test('should reject on 401 without auth', async (t) => {
     response: {},
     meta: {},
     auth: null,
-    endpoint: createEndpoint({ uri: 'http://json11.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json11.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -432,7 +448,9 @@ test('should reject on 403 ', async (t) => {
     response: {},
     meta: {},
     auth: null,
-    endpoint: createEndpoint({ uri: 'http://json12.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json12.test/entries/ent1',
+    }),
   }
 
   const ret = await send(exchange, null)
@@ -456,7 +474,7 @@ test('should send with headers from endpoint', async (t) => {
     request: { type: 'entry', data: '{}' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       headers: { 'If-Match': '3-871801934' },
       uri: 'http://json13.test/entries/ent1',
     }),
@@ -482,7 +500,9 @@ test('should retrieve with auth headers', async (t) => {
     request: { type: 'entry', data: '{}' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json14.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json14.test/entries/ent1',
+    }),
     auth: { Authorization: 'The_token' },
   }
 
@@ -519,7 +539,7 @@ test('should retrieve with headers from exchange', async (t) => {
     },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       headers: { 'If-Match': '3-871801934' },
       uri: 'http://json15.test/entries/ent1',
     }),
@@ -551,7 +571,9 @@ test('should remove content-type header in GET requests', async (t) => {
     },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: 'http://json24.test/entries/ent1' }),
+    options: prepareOptions({
+      uri: 'http://json24.test/entries/ent1',
+    }),
     auth: null,
   }
 
@@ -575,7 +597,7 @@ test('should retrieve with auth params in querystring', async (t) => {
     request: { type: 'entry', data: '{}' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({
+    options: prepareOptions({
       uri: 'http://json16.test/entries/ent1',
       authAsQuery: true,
       queryParams: { order: 'desc' },
@@ -609,7 +631,7 @@ test('should return error when no uri', async (t) => {
     request: { type: 'entry' },
     response: {},
     meta: {},
-    endpoint: createEndpoint({ uri: undefined }),
+    options: prepareOptions({ uri: undefined }),
   }
 
   const ret = await send(exchange, null)

@@ -128,7 +128,7 @@ const removeContentTypeIf = (
     : headers
 
 const createHeaders = (
-  endpoint?: EndpointOptions,
+  options?: EndpointOptions,
   data?: unknown,
   headers?: Record<string, unknown>,
   auth?: Record<string, unknown> | boolean | null
@@ -136,32 +136,27 @@ const createHeaders = (
   ...(typeof data === 'string'
     ? { 'Content-Type': 'text/plain' }
     : { 'Content-Type': 'application/json' }), // Will be removed later on if GET
-  ...endpoint?.headers,
+  ...options?.headers,
   ...headers,
-  ...(auth === true || endpoint?.authAsQuery ? {} : auth),
+  ...(auth === true || options?.authAsQuery ? {} : auth),
 })
 
-const selectMethod = (endpoint?: EndpointOptions, data?: unknown) =>
-  endpoint?.method || (data ? ('PUT' as const) : ('GET' as const))
+const selectMethod = (options?: EndpointOptions, data?: unknown) =>
+  options?.method || (data ? ('PUT' as const) : ('GET' as const))
 
 const prepareBody = (data: unknown) =>
   typeof data === 'string' || data === undefined ? data : JSON.stringify(data)
 
-function optionsFromEndpoint(exchange: Exchange, endpoint?: EndpointOptions) {
-  const method = selectMethod(endpoint, exchange.request.data)
+function optionsFromEndpoint({ options, request, auth }: Exchange) {
+  const method = selectMethod(options, request.data)
   return {
-    prefixUrl: endpoint?.baseUri,
-    url: generateUrl(endpoint),
-    searchParams: generateQueryParams(endpoint, exchange.auth),
+    prefixUrl: options?.baseUri,
+    url: generateUrl(options),
+    searchParams: generateQueryParams(options, auth),
     method,
-    body: prepareBody(exchange.request.data),
+    body: prepareBody(request.data),
     headers: removeContentTypeIf(
-      createHeaders(
-        endpoint,
-        exchange.request.data,
-        exchange.request.headers,
-        exchange.auth
-      ),
+      createHeaders(options, request.data, request.headers, auth),
       method === 'GET'
     ),
     retry: 0,
@@ -172,17 +167,14 @@ export default async function send(
   exchange: Exchange,
   _connection: Connection | null
 ): Promise<Exchange> {
-  const { url, ...options } = optionsFromEndpoint(
-    exchange,
-    exchange.endpoint?.options
-  )
+  const { url, ...options } = optionsFromEndpoint(exchange)
 
   if (!url) {
     return updateExchange(
       exchange,
       'badrequest',
       undefined,
-      'Request is missing endpoint or uri'
+      'No uri is provided in the exchange'
     )
   }
 

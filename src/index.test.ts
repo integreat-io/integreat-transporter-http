@@ -32,7 +32,7 @@ test('should do nothing when callling disconnect', async (t) => {
 
 // Tests -- prepareOptions
 
-test('should return endpoint object', (t) => {
+test('should return options object', (t) => {
   const options = {
     uri: 'http://example.com/',
     headers: {
