@@ -26,15 +26,15 @@
   },
   "dependencies": {
     "@types/debug": "^4.1.5",
-    "debug": "^4.2.0",
+    "debug": "^4.1.1",
     "got": "^11.5.2",
     "great-uri-template": "^0.1.6",
-    "integreat": "0.8.0-alpha.0",
+    "integreat": "0.8.0-alpha.1",
     "query-string": "^6.13.1"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^1.0.0",
-    "@types/sinon": "^9.0.4",
+    "@integreat/ts-dev-setup": "^1.2.0",
+    "@types/sinon": "^9.0.5",
     "nock": "^13.0.3",
     "sinon": "^9.0.2"
   }
