@@ -150,7 +150,7 @@ const prepareBody = (data: unknown) =>
 function optionsFromEndpoint({ options, request, auth }: Exchange) {
   const method = selectMethod(options, request.data)
   return {
-    prefixUrl: options?.baseUri,
+    prefixUrl: options?.baseUri as string | undefined,
     url: generateUrl(options),
     searchParams: generateQueryParams(options, auth),
     method,
