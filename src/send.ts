@@ -1,7 +1,6 @@
 import got, { HTTPError, Response } from 'got'
 import queryString = require('query-string')
-import { Exchange, Data, Connection } from 'integreat'
-import { EndpointOptions } from './types'
+import { Exchange, EndpointOptions, Connection } from './types'
 
 const extractFromError = (error: HTTPError | Error) =>
   error instanceof HTTPError
@@ -17,7 +16,7 @@ const extractFromError = (error: HTTPError | Error) =>
 const updateExchange = (
   exchange: Exchange,
   status: string,
-  data: Data,
+  data: unknown,
   error?: string
 ): Exchange => ({
   ...exchange,

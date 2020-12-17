@@ -1,6 +1,5 @@
 import send from './send'
-import { Transporter } from 'integreat'
-import { EndpointOptions } from './types'
+import { EndpointOptions, Transporter } from './types'
 
 /**
  * HTTP Transporter for Integreat

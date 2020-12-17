@@ -29,7 +29,6 @@
     "debug": "^4.1.1",
     "got": "^11.5.2",
     "great-uri-template": "^0.1.6",
-    "integreat": "0.8.0-alpha.2",
     "query-string": "^6.13.1"
   },
   "devDependencies": {
