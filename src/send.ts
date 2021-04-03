@@ -1,6 +1,6 @@
 import got, { HTTPError, Response } from 'got'
 import queryString = require('query-string')
-import { Exchange, EndpointOptions, Connection } from './types'
+import { Action, EndpointOptions, Connection } from './types'
 
 const extractFromError = (error: HTTPError | Error) =>
   error instanceof HTTPError
@@ -13,23 +13,23 @@ const extractFromError = (error: HTTPError | Error) =>
         statusMessage: error.message, // TODO: Return error.message in debug mode only?
       }
 
-const updateExchange = (
-  exchange: Exchange,
+const updateAction = (
+  action: Action,
   status: string,
   data: unknown,
   error?: string
-): Exchange => ({
-  ...exchange,
-  status,
+): Action => ({
+  ...action,
   response: {
-    ...exchange.response,
+    ...action.response,
+    status,
     ...(data !== undefined ? { data } : {}),
     ...(error !== undefined ? { error } : {}),
   },
 })
 
-function updateExchangeWithError(
-  exchange: Exchange,
+function updateActionWithError(
+  action: Action,
   error: HTTPError | Error,
   url: string
 ) {
@@ -49,7 +49,7 @@ function updateExchangeWithError(
       case 401:
       case 403:
         response.status = 'noaccess'
-        response.error = exchange.auth
+        response.error = action.meta?.auth
           ? 'Not authorized'
           : 'Service requires authentication'
         break
@@ -62,7 +62,7 @@ function updateExchangeWithError(
     }
   }
 
-  return updateExchange(exchange, response.status, undefined, response.error)
+  return updateAction(action, response.status, undefined, response.error)
 }
 
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
@@ -146,16 +146,19 @@ const selectMethod = (options?: EndpointOptions, data?: unknown) =>
 const prepareBody = (data: unknown) =>
   typeof data === 'string' || data === undefined ? data : JSON.stringify(data)
 
-function optionsFromEndpoint({ options, request, auth }: Exchange) {
-  const method = selectMethod(options, request.data)
+function optionsFromEndpoint({
+  payload,
+  meta: { options, auth } = {},
+}: Action) {
+  const method = selectMethod(options, payload.data)
   return {
     prefixUrl: options?.baseUri as string | undefined,
     url: generateUrl(options),
     searchParams: generateQueryParams(options, auth),
     method,
-    body: prepareBody(request.data),
+    body: prepareBody(payload.data),
     headers: removeContentTypeIf(
-      createHeaders(options, request.data, request.headers, auth),
+      createHeaders(options, payload.data, payload.headers, auth),
       method === 'GET'
     ),
     retry: 0,
@@ -163,17 +166,17 @@ function optionsFromEndpoint({ options, request, auth }: Exchange) {
 }
 
 export default async function send(
-  exchange: Exchange,
+  action: Action,
   _connection: Connection | null
-): Promise<Exchange> {
-  const { url, ...options } = optionsFromEndpoint(exchange)
+): Promise<Action> {
+  const { url, ...options } = optionsFromEndpoint(action)
 
   if (!url) {
-    return updateExchange(
-      exchange,
+    return updateAction(
+      action,
       'badrequest',
       undefined,
-      'No uri is provided in the exchange'
+      'No uri is provided in the action'
     )
   }
 
@@ -182,8 +185,8 @@ export default async function send(
     const response = await ((got(url, options) as unknown) as Promise<
       Response<string>
     >)
-    return updateExchange(exchange, 'ok', response.body)
+    return updateAction(action, 'ok', response.body)
   } catch (error) {
-    return updateExchangeWithError(exchange, error, url)
+    return updateActionWithError(action, error, url)
   }
 }

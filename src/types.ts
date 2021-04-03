@@ -37,52 +37,47 @@ export interface Payload<T = unknown> extends Record<string, unknown> {
   pageId?: string
 }
 
-export interface ExchangeRequest<T = unknown> {
+export type Meta = Record<string, unknown>
+
+export interface Payload<T = unknown> extends Record<string, unknown> {
   type?: string | string[]
   id?: string | string[]
-  params?: Params
   data?: T
+  sourceService?: string
+  targetService?: string
+  params?: Params
   uri?: string
   method?: string
   headers?: Record<string, string>
   page?: number
+  pageSize?: number
   pageAfter?: string
   pageBefore?: string
-  pageSize?: number
   pageId?: string
-  sendNoDefaults?: boolean
 }
 
-export interface ExchangeResponse<T = unknown> {
+export interface ActionMeta extends Record<string, unknown> {
+  id?: string
+  ident?: Ident
+  auth?: Record<string, unknown> | null
+  options?: EndpointOptions
+}
+
+export interface Response<T = unknown> {
+  status: string | null
   data?: T
   reason?: string
   error?: string
   warning?: string
   paging?: Paging
   params?: Params
-  returnNoDefaults?: boolean
 }
 
-export type Meta = Record<string, unknown>
-
-export interface Exchange<
-  RequestData = unknown,
-  ResponseData = unknown,
-  MetaData extends Meta = Meta
-> {
+export interface Action<P extends Payload = Payload, ResponseData = unknown> {
   type: string
-  id?: string
-  status: string | null
-  request: ExchangeRequest<RequestData>
-  response: ExchangeResponse<ResponseData>
-  ident?: Ident
-  auth?: Record<string, unknown> | null
-  meta: MetaData
-  endpointId?: string
-  options?: EndpointOptions
-  authorized?: boolean
-  source?: string
-  target?: string
+  payload: P
+  response?: Response<ResponseData>
+  meta?: ActionMeta
 }
 
 export interface Connection extends Record<string, unknown> {
@@ -97,6 +92,6 @@ export interface Transporter {
     authentication: Record<string, unknown> | null,
     connection: Connection | null
   ) => Promise<Connection | null>
-  send: (exchange: Exchange, connection: Connection | null) => Promise<Exchange>
+  send: (action: Action, connection: Connection | null) => Promise<Action>
   disconnect: (connection: Connection | null) => Promise<void>
 }
