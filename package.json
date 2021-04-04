@@ -1,6 +1,6 @@
 {
   "name": "integreat-transporter-http",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "description": "HTTP transporter for Integreat",
   "keywords": [
     "integreat",
@@ -28,7 +28,6 @@
     "@types/debug": "^4.1.5",
     "debug": "^4.3.2",
     "got": "^11.8.2",
-    "great-uri-template": "^0.1.6",
     "query-string": "^6.14.1"
   },
   "devDependencies": {
