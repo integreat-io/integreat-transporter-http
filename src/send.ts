@@ -1,6 +1,6 @@
-import got, { HTTPError, Response } from 'got'
+import got, { HTTPError, Response as GotResponse } from 'got'
 import queryString = require('query-string')
-import { Action, EndpointOptions, Connection } from './types'
+import { Action, Response, EndpointOptions, Connection } from './types'
 
 const extractFromError = (error: HTTPError | Error) =>
   error instanceof HTTPError
@@ -13,22 +13,19 @@ const extractFromError = (error: HTTPError | Error) =>
         statusMessage: error.message, // TODO: Return error.message in debug mode only?
       }
 
-const updateAction = (
+const createResponse = (
   action: Action,
   status: string,
   data: unknown,
   error?: string
-): Action => ({
-  ...action,
-  response: {
-    ...action.response,
-    status,
-    ...(data !== undefined ? { data } : {}),
-    ...(error !== undefined ? { error } : {}),
-  },
+): Response => ({
+  ...action.response,
+  status,
+  ...(data !== undefined ? { data } : {}),
+  ...(error !== undefined ? { error } : {}),
 })
 
-function updateActionWithError(
+function createResponseWithError(
   action: Action,
   error: HTTPError | Error,
   url: string
@@ -62,7 +59,7 @@ function updateActionWithError(
     }
   }
 
-  return updateAction(action, response.status, undefined, response.error)
+  return createResponse(action, response.status, undefined, response.error)
 }
 
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
@@ -168,11 +165,11 @@ function optionsFromEndpoint({
 export default async function send(
   action: Action,
   _connection: Connection | null
-): Promise<Action> {
+): Promise<Response> {
   const { url, ...options } = optionsFromEndpoint(action)
 
   if (!url) {
-    return updateAction(
+    return createResponse(
       action,
       'badrequest',
       undefined,
@@ -183,10 +180,10 @@ export default async function send(
   try {
     // Type hack, as the CancelableRequest type returned by got is not identified as a Promise
     const response = await ((got(url, options) as unknown) as Promise<
-      Response<string>
+      GotResponse<string>
     >)
-    return updateAction(action, 'ok', response.body)
+    return createResponse(action, 'ok', response.body)
   } catch (error) {
-    return updateActionWithError(action, error, url)
+    return createResponseWithError(action, error, url)
   }
 }

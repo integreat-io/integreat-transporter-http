@@ -33,8 +33,8 @@ test('should send data and return status and data', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
-  t.deepEqual(ret.response?.data, '{"id":"ent1"}')
+  t.is(ret.status, 'ok', ret.error)
+  t.deepEqual(ret.data, '{"id":"ent1"}')
   t.true(scope.isDone())
 })
 
@@ -54,8 +54,8 @@ test('should use GET method as default when no data', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
-  t.deepEqual(ret.response?.data, '{"id":"ent1","type":"entry"}')
+  t.is(ret.status, 'ok', ret.error)
+  t.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
   t.true(scope.isDone())
 })
 
@@ -78,8 +78,8 @@ test('should convert all non-string data to JSON', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
-  t.deepEqual(ret.response?.data, '{"id":"ent1"}')
+  t.is(ret.status, 'ok', ret.error)
+  t.deepEqual(ret.data, '{"id":"ent1"}')
   t.true(scope.isDone())
 })
 
@@ -101,7 +101,7 @@ test('should use method from endpoint', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -124,7 +124,7 @@ test('should support base url', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -150,7 +150,7 @@ test('should set query params from options', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -177,7 +177,7 @@ test('should encode query params correctly', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -208,7 +208,7 @@ test('should force query param values to string', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -234,7 +234,7 @@ test('should exclude query params with undefined value', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -257,7 +257,7 @@ test('should set query params from options when uri has query string', async (t)
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -278,7 +278,7 @@ test('should return ok status on all 200-range statuses', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
 
@@ -296,12 +296,9 @@ test('should return error on not found', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'notfound', ret.response?.error)
-  t.is(
-    ret.response?.error,
-    'Could not find the url http://json5.test/entries/unknown'
-  )
-  t.is(ret.response?.data, undefined)
+  t.is(ret.status, 'notfound', ret.error)
+  t.is(ret.error, 'Could not find the url http://json5.test/entries/unknown')
+  t.is(ret.data, undefined)
 })
 
 test('should return error on other error', async (t) => {
@@ -318,12 +315,9 @@ test('should return error on other error', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'error', ret.response?.error)
-  t.is(
-    ret.response?.error,
-    'Server returned 500 for http://json6.test/entries/error'
-  )
-  t.is(ret.response?.data, undefined)
+  t.is(ret.status, 'error', ret.error)
+  t.is(ret.error, 'Server returned 500 for http://json6.test/entries/error')
+  t.is(ret.data, undefined)
 })
 
 test('should return error on request error', async (t) => {
@@ -342,7 +336,7 @@ test('should return error on request error', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'error', ret.response?.error)
+  t.is(ret.status, 'error', ret.error)
 })
 
 test('should respond with badrequest on 400', async (t) => {
@@ -360,8 +354,8 @@ test('should respond with badrequest on 400', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'badrequest', ret.response?.error)
-  t.is(typeof ret.response?.error, 'string')
+  t.is(ret.status, 'badrequest', ret.error)
+  t.is(typeof ret.error, 'string')
 })
 
 test('should respond with timeout on 408', async (t) => {
@@ -379,8 +373,8 @@ test('should respond with timeout on 408', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'timeout', ret.response?.error)
-  t.is(typeof ret.response?.error, 'string')
+  t.is(ret.status, 'timeout', ret.error)
+  t.is(typeof ret.error, 'string')
 })
 
 test('should reject on 401 with auth', async (t) => {
@@ -398,8 +392,8 @@ test('should reject on 401 with auth', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'noaccess', ret.response?.error)
-  t.is(ret.response?.error, 'Not authorized')
+  t.is(ret.status, 'noaccess', ret.error)
+  t.is(ret.error, 'Not authorized')
 })
 
 test('should reject on 401 without auth', async (t) => {
@@ -417,8 +411,8 @@ test('should reject on 401 without auth', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'noaccess', ret.response?.error)
-  t.is(ret.response?.error, 'Service requires authentication')
+  t.is(ret.status, 'noaccess', ret.error)
+  t.is(ret.error, 'Service requires authentication')
 })
 
 test('should reject on 403 ', async (t) => {
@@ -436,8 +430,8 @@ test('should reject on 403 ', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'noaccess', ret.response?.error)
-  t.is(typeof ret.response?.error, 'string')
+  t.is(ret.status, 'noaccess', ret.error)
+  t.is(typeof ret.error, 'string')
 })
 
 test('should send with headers from endpoint', async (t) => {
@@ -463,7 +457,7 @@ test('should send with headers from endpoint', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
 })
 
 test('should retrieve with auth headers', async (t) => {
@@ -487,7 +481,7 @@ test('should retrieve with auth headers', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
 })
 
 test('should retrieve with headers from action', async (t) => {
@@ -526,7 +520,7 @@ test('should retrieve with headers from action', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
 })
 
 test('should remove content-type header in GET requests', async (t) => {
@@ -556,7 +550,7 @@ test('should remove content-type header in GET requests', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
 })
 
 test('should retrieve with auth params in querystring', async (t) => {
@@ -583,7 +577,7 @@ test('should retrieve with auth params in querystring', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'ok', ret.response?.error)
+  t.is(ret.status, 'ok', ret.error)
 })
 
 test('should return error when no endpoint', async (t) => {
@@ -595,7 +589,7 @@ test('should return error when no endpoint', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'badrequest', ret.response?.error)
+  t.is(ret.status, 'badrequest', ret.error)
 })
 
 test('should return error when no uri', async (t) => {
@@ -609,7 +603,7 @@ test('should return error when no uri', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.response?.status, 'badrequest', ret.response?.error)
+  t.is(ret.status, 'badrequest', ret.error)
 })
 
 test.todo('should retry')
