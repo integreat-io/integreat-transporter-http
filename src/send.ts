@@ -1,6 +1,49 @@
+import debugFn from 'debug'
 import got, { HTTPError, Response as GotResponse } from 'got'
 import queryString = require('query-string')
 import { Action, Response, EndpointOptions, Connection } from './types'
+
+export interface Options {
+  prefixUrl?: string
+  url?: string
+  searchParams: Record<string, string>
+  method:
+    | 'GET'
+    | 'POST'
+    | 'PUT'
+    | 'PATCH'
+    | 'HEAD'
+    | 'DELETE'
+    | 'OPTIONS'
+    | 'TRACE'
+    | 'get'
+    | 'post'
+    | 'put'
+    | 'patch'
+    | 'head'
+    | 'delete'
+    | 'options'
+    | 'trace'
+  body?: string
+  headers: Record<string, string>
+  retry: number
+}
+
+const debug = debugFn('great:transporter:http')
+
+const logRequest = (request: Options) => {
+  const message = `Sending ${request.method} ${request.url}`
+  debug('%s: %o', message, request.body)
+}
+
+const logResponse = (response: Response, { url, method }: Options) => {
+  const { status, error } = response
+  const message =
+    status === 'ok'
+      ? `Success from ${method} ${url}`
+      : `Error '${status}' from ${method} ${url}: ${error}`
+  debug('%s: %o', message, response)
+}
 
 const extractFromError = (error: HTTPError | Error) =>
   error instanceof HTTPError
@@ -146,7 +189,7 @@ const prepareBody = (data: unknown) =>
 function optionsFromEndpoint({
   payload,
   meta: { options, auth } = {},
-}: Action) {
+}: Action): Options {
   const method = selectMethod(options, payload.data)
   return {
     prefixUrl: options?.baseUri as string | undefined,
@@ -178,11 +221,14 @@ export default async function send(
   }
 
   try {
+    logRequest({ url, ...options })
     // Type hack, as the CancelableRequest type returned by got is not identified as a Promise
-    const response = await ((got(url, options) as unknown) as Promise<
+    const gotResponse = await ((got(url, options) as unknown) as Promise<
       GotResponse<string>
     >)
-    return createResponse(action, 'ok', response.body)
+    const response = createResponse(action, 'ok', gotResponse.body)
+    logResponse(response, { url, ...options })
+    return response
   } catch (error) {
     return createResponseWithError(action, error, url)
   }
