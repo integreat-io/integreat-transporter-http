@@ -25,7 +25,7 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@types/debug": "^4.1.5",
+    "@types/debug": "^4.1.6",
     "debug": "^4.3.2",
     "got": "^11.8.2",
     "query-string": "^6.14.1"
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@integreat/ts-dev-setup": "^1.2.1",
     "@types/sinon": "^9.0.11",
-    "nock": "^13.0.11",
+    "nock": "^13.1.1",
     "sinon": "^9.2.4"
   }
 }
