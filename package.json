@@ -25,15 +25,15 @@
     "node": ">= 10"
   },
   "dependencies": {
-    "@types/debug": "^4.1.6",
-    "debug": "^4.3.2",
-    "got": "^11.8.2",
-    "query-string": "^6.14.1"
+    "@types/debug": "^4.1.7",
+    "debug": "^4.3.3",
+    "got": "^11.8.3",
+    "query-string": "^7.1.0"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^1.2.1",
-    "@types/sinon": "^9.0.11",
-    "nock": "^13.1.1",
-    "sinon": "^9.2.4"
+    "@integreat/ts-dev-setup": "^2.2.0",
+    "@types/sinon": "^10.0.9",
+    "nock": "^13.2.2",
+    "sinon": "^13.0.0"
   }
 }
