@@ -320,6 +320,27 @@ test('should return error on other error', async (t) => {
   t.is(ret.data, undefined)
 })
 
+test('should return response on error', async (t) => {
+  nock('http://json25.test')
+    .get('/entries/error')
+    .reply(500, { error: 'No time to deal with this' })
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry' },
+    meta: {
+      options: prepareOptions({
+        uri: 'http://json25.test/entries/error',
+      }),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  t.is(ret.status, 'error', ret.error)
+  t.is(ret.error, 'Server returned 500 for http://json25.test/entries/error')
+  t.is(ret.data, JSON.stringify({ error: 'No time to deal with this' }))
+})
+
 test('should return error on request error', async (t) => {
   nock('http://json7.test')
     .get('/entries/ent1')
@@ -502,8 +523,7 @@ test('should retrieve with headers from action', async (t) => {
     type: 'SET',
     payload: {
       type: 'entry',
-      data:
-        '<?xml version="1.0" encoding="utf-8"?><soap:Envelope></soap:Envelope>',
+      data: '<?xml version="1.0" encoding="utf-8"?><soap:Envelope></soap:Envelope>',
       headers: {
         'x-correlation-id': '1234567890',
         'Content-Type': 'text/xml;charset=utf-8',

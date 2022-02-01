@@ -1,35 +1,14 @@
 import debugFn from 'debug'
-import got, { HTTPError, Response as GotResponse } from 'got'
+import got, { HTTPError, Response as GotResponse, Options } from 'got'
 import queryString = require('query-string')
 import { Action, Response, EndpointOptions, Connection } from './types'
 
-export interface Options {
-  prefixUrl?: string
-  url?: string
-  searchParams: Record<string, string>
-  method:
-    | 'GET'
-    | 'POST'
-    | 'PUT'
-    | 'PATCH'
-    | 'HEAD'
-    | 'DELETE'
-    | 'OPTIONS'
-    | 'TRACE'
-    | 'get'
-    | 'post'
-    | 'put'
-    | 'patch'
-    | 'head'
-    | 'delete'
-    | 'options'
-    | 'trace'
-  body?: string
-  headers: Record<string, string>
-  retry: number
-}
-
 const debug = debugFn('great:transporter:http')
+
+const isGotResponse = (response: unknown): response is GotResponse =>
+  !!response &&
+  typeof response === 'object' &&
+  typeof (response as GotResponse).statusCode === 'number'
 
 const logRequest = (request: Options) => {
   const message = `Sending ${request.method} ${request.url}`
@@ -45,16 +24,16 @@ const logResponse = (response: Response, { url, method }: Options) => {
   debug('%s: %o', message, response)
 }
 
-const extractFromError = (error: HTTPError | Error) =>
-  error instanceof HTTPError
-    ? {
-        statusCode: error.response.statusCode,
-        statusMessage: error.response.statusMessage,
-      }
-    : {
-        statusCode: undefined,
-        statusMessage: error.message, // TODO: Return error.message in debug mode only?
-      }
+const extractFromError = (
+  error: unknown
+): [number | undefined, string | undefined, unknown] =>
+  isGotResponse(error)
+    ? [error.statusCode, error.statusMessage, error.body]
+    : error instanceof HTTPError
+    ? [error.response.statusCode, error.response.statusMessage, undefined]
+    : error instanceof Error
+    ? [undefined, error.message, undefined] // TODO: Return error.message in debug mode only?
+    : [undefined, 'Unknown response', undefined]
 
 const createResponse = (
   action: Action,
@@ -64,16 +43,13 @@ const createResponse = (
 ): Response => ({
   ...action.response,
   status,
-  ...(data !== undefined ? { data } : {}),
+  ...(data !== undefined && data !== '' ? { data } : {}),
   ...(error !== undefined ? { error } : {}),
 })
 
-function createResponseWithError(
-  action: Action,
-  error: HTTPError | Error,
-  url: string
-) {
-  const { statusCode, statusMessage } = extractFromError(error)
+function createResponseWithError(action: Action, url: string, err: unknown) {
+  const [statusCode, statusMessage, data] = extractFromError(err)
+
   const response = {
     status: 'error',
     error: `Server returned ${statusCode} for ${url}`,
@@ -102,12 +78,12 @@ function createResponseWithError(
     }
   }
 
-  return createResponse(action, response.status, undefined, response.error)
+  return createResponse(action, response.status, data, response.error)
 }
 
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
   doRemove && typeof uri === 'string' && uri.startsWith('/')
-    ? uri.substr(1)
+    ? uri.slice(1)
     : uri
 
 const generateUrl = ({ uri, baseUri }: EndpointOptions = {}) =>
@@ -117,7 +93,7 @@ function extractQueryParamsFromUri(uri?: string) {
   if (typeof uri === 'string') {
     const position = uri.indexOf('?')
     if (position > -1) {
-      return queryString.parse(uri.substr(position))
+      return queryString.parse(uri.slice(position))
     }
   }
   return {}
@@ -189,7 +165,7 @@ const prepareBody = (data: unknown) =>
 function optionsFromEndpoint({
   payload,
   meta: { options, auth } = {},
-}: Action): Options {
+}: Action) {
   const method = selectMethod(options, payload.data)
   return {
     prefixUrl: options?.baseUri as string | undefined,
@@ -202,8 +178,12 @@ function optionsFromEndpoint({
       method === 'GET'
     ),
     retry: 0,
+    throwHttpErrors: false,
   }
 }
+
+const isOkResponse = (gotResponse: GotResponse) =>
+  gotResponse.statusCode >= 200 && gotResponse.statusCode < 400
 
 export default async function send(
   action: Action,
@@ -223,13 +203,15 @@ export default async function send(
   try {
     logRequest({ url, ...options })
     // Type hack, as the CancelableRequest type returned by got is not identified as a Promise
-    const gotResponse = await ((got(url, options) as unknown) as Promise<
+    const gotResponse = await (got(url, options) as unknown as Promise<
       GotResponse<string>
     >)
-    const response = createResponse(action, 'ok', gotResponse.body)
+    const response = isOkResponse(gotResponse)
+      ? createResponse(action, 'ok', gotResponse.body)
+      : createResponseWithError(action, url, gotResponse)
     logResponse(response, { url, ...options })
     return response
   } catch (error) {
-    return createResponseWithError(action, error, url)
+    return createResponseWithError(action, url, error)
   }
 }
