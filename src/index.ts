@@ -1,4 +1,7 @@
+import connect from './connect'
 import send from './send'
+import listen from './listen'
+import disconnect from './disconnect'
 import { EndpointOptions, Transporter } from './types'
 
 /**
@@ -9,11 +12,13 @@ const httpTransporter: Transporter = {
 
   prepareOptions: (options: EndpointOptions) => options,
 
-  connect: async (_options, _authentication, connection) => connection,
+  connect,
 
   send,
 
-  disconnect: async (_connection) => undefined,
+  listen,
+
+  disconnect,
 }
 
 export default httpTransporter

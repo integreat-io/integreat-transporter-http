@@ -1,9 +1,18 @@
+import http = require('http')
+
+export interface IncomingOptions {
+  host?: string | string[]
+  path?: string | string[]
+  port?: number
+}
+
 export interface EndpointOptions extends Record<string, unknown> {
   baseUri?: string
   uri?: string
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  queryParams?: Record<string, string | number>
+  queryParams?: Record<string, unknown>
   headers?: Record<string, string>
+  incoming?: IncomingOptions
 }
 
 export interface Ident {
@@ -71,6 +80,7 @@ export interface Response<T = unknown> {
   warning?: string
   paging?: Paging
   params?: Params
+  headers?: Record<string, string>
 }
 
 export interface Action<P extends Payload = Payload, ResponseData = unknown> {
@@ -80,18 +90,34 @@ export interface Action<P extends Payload = Payload, ResponseData = unknown> {
   meta?: ActionMeta
 }
 
+export interface ConnectionIncomingOptions {
+  host: string[]
+  path: string[]
+  port: number
+}
+
 export interface Connection extends Record<string, unknown> {
   status: string
+  server?: http.Server
+  incoming?: ConnectionIncomingOptions
 }
 
 export interface Transporter {
   authentication: string | null
-  prepareOptions: (options: Record<string, unknown>) => Record<string, unknown>
+  prepareOptions: (options: EndpointOptions) => EndpointOptions
   connect: (
-    options: Record<string, unknown>,
+    options: EndpointOptions,
     authentication: Record<string, unknown> | null,
     connection: Connection | null
   ) => Promise<Connection | null>
   send: (action: Action, connection: Connection | null) => Promise<Response>
+  listen?: (
+    dispatch: Dispatch,
+    connection: Connection | null
+  ) => Promise<Response>
   disconnect: (connection: Connection | null) => Promise<void>
+}
+
+export interface Dispatch<T = unknown> {
+  (action: Action | null): Promise<Response<T>>
 }
