@@ -28,8 +28,8 @@ const actionMatchesOptions = (
   action: Action,
   options: ConnectionIncomingOptions
 ) =>
-  matchesHostname(action.payload.params?.hostname, options.host) &&
-  matchesPath(action.payload.params?.path, options.path)
+  matchesHostname(action.payload.hostname, options.host) &&
+  matchesPath(action.payload.path, options.path)
 
 const actionTypeFromRequest = (request: http.IncomingMessage) =>
   request.method === 'GET' ? 'GET' : 'SET'
@@ -99,14 +99,12 @@ async function actionFromRequest(request: http.IncomingMessage) {
     type: actionTypeFromRequest(request),
     payload: {
       ...(data && { data }),
-      params: {
-        method: request.method,
-        hostname,
-        port,
-        path: request.url,
-        contentType: contentTypeFromRequest(request),
-        headers: request.headers,
-      },
+      method: request.method,
+      hostname,
+      port,
+      path: request.url,
+      contentType: contentTypeFromRequest(request),
+      headers: request.headers as Record<string, string>,
     },
     meta: {},
   }

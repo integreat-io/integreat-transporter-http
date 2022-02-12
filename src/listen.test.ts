@@ -50,19 +50,17 @@ test('should dispatch GET request as GET action and respond with response', asyn
   const expectedAction = {
     type: 'GET',
     payload: {
-      params: {
-        method: 'GET',
-        hostname: 'localhost',
-        port: 9002,
-        path: '/entries',
-        contentType: 'application/json',
-        headers: {
-          'accept-encoding': 'gzip, deflate, br',
-          connection: 'close',
-          'content-type': 'application/json',
-          host: 'localhost:9002',
-          'user-agent': 'got (https://github.com/sindresorhus/got)',
-        },
+      method: 'GET',
+      hostname: 'localhost',
+      port: 9002,
+      path: '/entries',
+      contentType: 'application/json',
+      headers: {
+        'accept-encoding': 'gzip, deflate, br',
+        connection: 'close',
+        'content-type': 'application/json',
+        host: 'localhost:9002',
+        'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
     meta: {},
@@ -99,20 +97,18 @@ test('should dispatch POST request as SET action', async (t) => {
     type: 'SET',
     payload: {
       data: requestData,
-      params: {
-        method: 'POST',
-        hostname: 'localhost',
-        port: 9003,
-        path: '/entries',
-        contentType: 'application/json',
-        headers: {
-          'accept-encoding': 'gzip, deflate, br',
-          connection: 'close',
-          'content-type': 'application/json',
-          'content-length': '15',
-          host: 'localhost:9003',
-          'user-agent': 'got (https://github.com/sindresorhus/got)',
-        },
+      method: 'POST',
+      hostname: 'localhost',
+      port: 9003,
+      path: '/entries',
+      contentType: 'application/json',
+      headers: {
+        'accept-encoding': 'gzip, deflate, br',
+        connection: 'close',
+        'content-type': 'application/json',
+        'content-length': '15',
+        host: 'localhost:9003',
+        'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
     meta: {},
@@ -153,7 +149,7 @@ test('should dispatch PUT request as SET action', async (t) => {
   t.is(dispatch.callCount, 1)
   const dispatchedAction = dispatch.args[0][0]
   t.is(dispatchedAction.type, 'SET')
-  t.is(dispatchedAction.payload.params.method, 'PUT')
+  t.is(dispatchedAction.payload.method, 'PUT')
 
   connection.server.close()
 })
@@ -201,14 +197,14 @@ test('should dispatch other content-type', async (t) => {
   t.is(dispatch.callCount, 1)
   const dispatchedAction = dispatch.args[0][0]
   t.is(dispatchedAction.type, 'SET')
-  t.is(dispatchedAction.payload.params.method, 'POST')
-  t.is(dispatchedAction.payload.params.contentType, 'text/xml')
+  t.is(dispatchedAction.payload.method, 'POST')
+  t.is(dispatchedAction.payload.contentType, 'text/xml')
   t.is(
-    dispatchedAction.payload.params.headers['content-type'],
+    dispatchedAction.payload.headers['content-type'],
     'text/xml; charset=utf-8'
   )
   t.is(
-    dispatchedAction.payload.params.headers.soapaction,
+    dispatchedAction.payload.headers.soapaction,
     'http://api.net/SomeWeirdSoapAction'
   )
   t.is(response.statusCode, 200)
