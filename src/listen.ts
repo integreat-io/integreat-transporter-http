@@ -140,7 +140,7 @@ const createHandler = (ourServices: [Dispatch, ConnectionIncomingOptions][]) =>
 export default async function listen(
   dispatch: Dispatch,
   connection: Connection | null
-) {
+): Promise<Response> {
   if (!connection) {
     return {
       status: 'badrequest',
