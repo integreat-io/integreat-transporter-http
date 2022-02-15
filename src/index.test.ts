@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import test from 'ava'
 
 import transporter from '.'
@@ -46,4 +47,31 @@ test('should return options object', (t) => {
   const ret = transporter.prepareOptions(options)
 
   t.deepEqual(ret, expected)
+})
+
+// Tests -- shouldListen
+
+test('should return true when incoming is set in options', (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+    incoming: {
+      host: 'test1.api',
+      path: '/entries',
+      port: 8080,
+    },
+  }
+
+  const ret = transporter.shouldListen!(options)
+
+  t.true(ret)
+})
+
+test('should return false when incoming is not set in options', (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+  }
+
+  const ret = transporter.shouldListen!(options)
+
+  t.false(ret)
 })

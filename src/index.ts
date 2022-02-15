@@ -16,6 +16,8 @@ const httpTransporter: Transporter = {
 
   send,
 
+  shouldListen: (options: EndpointOptions) => !!options.incoming,
+
   listen,
 
   disconnect,

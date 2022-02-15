@@ -70,7 +70,7 @@ test('should create one server for each port', async (t) => {
   ret2?.server?.close()
 })
 
-test('should create set incoming options on connection', async (t) => {
+test('should set incoming options on connection', async (t) => {
   const options = {
     uri: 'http://foreign.api',
     incoming: {
