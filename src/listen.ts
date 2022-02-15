@@ -184,7 +184,14 @@ export default async function listen(
 
   // Start listening on port if we're not already listening
   if (!server.listening) {
-    server.listen(incoming.port)
+    try {
+      server.listen(incoming.port)
+    } catch (error) {
+      return {
+        status: 'error',
+        error: `Cannot listen to server on port ${incoming.port}. ${error}`,
+      }
+    }
   }
 
   return { status: 'ok' }

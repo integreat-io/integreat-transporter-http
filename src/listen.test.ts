@@ -588,6 +588,31 @@ test('should keep port setups seperate', async (t) => {
   server1.close()
 })
 
+test('should return error from server.listen()', async (t) => {
+  const dispatch = sinon
+    .stub()
+    .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9001 },
+  }
+  sinon
+    .stub(connection.server, 'listen')
+    .throws(new Error('listen EADDRINUSE: address already in use'))
+
+  const ret = await listen(dispatch, connection)
+
+  t.deepEqual(ret, {
+    status: 'error',
+    error:
+      'Cannot listen to server on port 9001. Error: listen EADDRINUSE: address already in use',
+  })
+  t.is(dispatch.callCount, 0) // No dispatching witouth requests
+
+  connection.server.close()
+})
+
 test('should return with status badrequest when incomming has no port', async (t) => {
   const dispatch = sinon.stub().resolves({ status: 'ok', data: [] })
   const connection = {
