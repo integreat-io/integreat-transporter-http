@@ -30,7 +30,7 @@ test('should return ok when on await listen', async (t) => {
   const ret = await listen(dispatch, connection)
 
   t.deepEqual(ret, { status: 'ok' })
-  t.is(dispatch.callCount, 0) // No dispatching witouth requests
+  t.is(dispatch.callCount, 0) // No dispatching without requests
 
   connection.server.close()
 })
@@ -595,21 +595,46 @@ test('should return error from server.listen()', async (t) => {
   const connection = {
     status: 'ok',
     server: http.createServer(),
-    incoming: { host: ['localhost'], path: ['/entries'], port: 9001 },
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9022 },
   }
   sinon
     .stub(connection.server, 'listen')
-    .throws(new Error('listen EADDRINUSE: address already in use'))
+    .throws(new Error('Something went terribly wrong'))
 
   const ret = await listen(dispatch, connection)
 
   t.deepEqual(ret, {
     status: 'error',
     error:
-      'Cannot listen to server on port 9001. Error: listen EADDRINUSE: address already in use',
+      'Cannot listen to server on port 9022. Error: Something went terribly wrong',
   })
-  t.is(dispatch.callCount, 0) // No dispatching witouth requests
+  t.is(dispatch.callCount, 0)
 
+  connection.server.close()
+})
+
+test('should return error when server fails', async (t) => {
+  const dispatch = sinon
+    .stub()
+    .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9023 },
+  }
+  const otherServer = http.createServer()
+
+  otherServer.listen(9023)
+  const ret = await listen(dispatch, connection)
+
+  t.deepEqual(ret, {
+    status: 'error',
+    error:
+      'Cannot listen to server on port 9023. Error: listen EADDRINUSE: address already in use :::9023',
+  })
+  t.is(dispatch.callCount, 0) // No dispatching without requests
+
+  otherServer.close()
   connection.server.close()
 })
 

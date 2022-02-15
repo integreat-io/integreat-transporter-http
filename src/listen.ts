@@ -184,6 +184,12 @@ export default async function listen(
 
   // Start listening on port if we're not already listening
   if (!server.listening) {
+    server.on('error', (e) => {
+      error = e
+    })
+    let error: Error | null = null
+
+    // Start listening
     try {
       server.listen(incoming.port)
     } catch (error) {
@@ -192,6 +198,20 @@ export default async function listen(
         error: `Cannot listen to server on port ${incoming.port}. ${error}`,
       }
     }
+
+    // The server has been started but give it a few ms to make sure it doesn't throw
+    return new Promise((resolve, _reject) => {
+      setTimeout(() => {
+        if (error) {
+          resolve({
+            status: 'error',
+            error: `Cannot listen to server on port ${incoming.port}. ${error}`,
+          })
+        } else {
+          resolve({ status: 'ok' })
+        }
+      }, 100)
+    })
   }
 
   return { status: 'ok' }
