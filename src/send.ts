@@ -12,7 +12,7 @@ const isGotResponse = (response: unknown): response is GotResponse =>
 
 const logRequest = (request: Options) => {
   const message = `Sending ${request.method} ${request.url}`
-  debug('%s: %o', message, request.body)
+  debug('%s: %o', message, request.headers, request.body)
 }
 
 const logResponse = (response: Response, { url, method }: Options) => {
