@@ -4,7 +4,7 @@ import http = require('http')
 import got from 'got'
 import { Connection } from './types'
 
-import listen from './listen'
+import listen, { splitHost } from './listen'
 
 // Setup
 
@@ -686,4 +686,24 @@ test('should return with status noaction when connection has no incomming', asyn
     status: 'noaction',
     error: 'Service not configured for listening',
   })
+})
+
+// Tests -- splitHost
+
+test('should split host', (t) => {
+  const host = 'the.host.com:3001'
+  const expected = ['the.host.com', 3001]
+
+  const ret = splitHost(host)
+
+  t.deepEqual(ret, expected)
+})
+
+test('should split host without port', (t) => {
+  const host = 'the.host.com'
+  const expected = ['the.host.com', undefined]
+
+  const ret = splitHost(host)
+
+  t.deepEqual(ret, expected)
 })

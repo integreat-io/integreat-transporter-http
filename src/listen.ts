@@ -73,12 +73,12 @@ function statusCodeFromResponse(response: Response) {
   }
 }
 
-function splitHost(host?: string) {
+export function splitHost(host?: string) {
   if (!host) {
     return []
   }
   const portIndex = host.lastIndexOf(':')
-  const hostname = host.slice(0, portIndex)
+  const hostname = portIndex >= 0 ? host.slice(0, portIndex) : host
   const port = Number.parseInt(host.slice(portIndex + 1), 10) || undefined
   return [hostname, port]
 }
@@ -91,7 +91,10 @@ async function readDataFromRequest(request: http.IncomingMessage) {
   return Buffer.concat(buffers).toString()
 }
 
-async function actionFromRequest(request: http.IncomingMessage) {
+async function actionFromRequest(
+  request: http.IncomingMessage,
+  incomingPort: number
+) {
   const [hostname, port] = splitHost(request.headers['host'])
   const data = await readDataFromRequest(request)
 
@@ -101,7 +104,7 @@ async function actionFromRequest(request: http.IncomingMessage) {
       ...(data && { data }),
       method: request.method,
       hostname,
-      port,
+      port: port || incomingPort,
       path: request.url,
       contentType: contentTypeFromRequest(request),
       headers: request.headers as Record<string, string>,
@@ -110,12 +113,15 @@ async function actionFromRequest(request: http.IncomingMessage) {
   }
 }
 
-const createHandler = (ourServices: [Dispatch, ConnectionIncomingOptions][]) =>
+const createHandler = (
+  ourServices: [Dispatch, ConnectionIncomingOptions][],
+  incomingPort: number
+) =>
   async function handleIncoming(
     req: http.IncomingMessage,
     res: http.ServerResponse
   ) {
-    const action = await actionFromRequest(req)
+    const action = await actionFromRequest(req, incomingPort)
 
     const [dispatch] =
       ourServices.find(([, options]) =>
@@ -176,7 +182,7 @@ export default async function listen(
 
   // Set up listener if this is the first service to listen on this port
   if (ourServices.length === 0) {
-    server.on('request', createHandler(ourServices))
+    server.on('request', createHandler(ourServices, incoming.port))
   }
 
   // Add service settings to list
