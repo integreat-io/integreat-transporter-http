@@ -4,7 +4,7 @@ import http = require('http')
 import got from 'got'
 import { Connection } from './types'
 
-import listen, { splitHost } from './listen'
+import listen from './listen'
 
 // Setup
 
@@ -43,7 +43,7 @@ test('should dispatch GET request as GET action and respond with response', asyn
     server: http.createServer(),
     incoming: { host: ['localhost'], path: ['/entries'], port: 9002 },
   }
-  const url = 'http://localhost:9002/entries'
+  const url = 'http://localhost:9002/entries?filter=all&format=json'
   const options = {
     headers: { 'Content-Type': 'application/json' },
   }
@@ -54,6 +54,10 @@ test('should dispatch GET request as GET action and respond with response', asyn
       hostname: 'localhost',
       port: 9002,
       path: '/entries',
+      queryParams: {
+        filter: 'all',
+        format: 'json',
+      },
       contentType: 'application/json',
       headers: {
         'accept-encoding': 'gzip, deflate, br',
@@ -101,6 +105,7 @@ test('should dispatch POST request as SET action', async (t) => {
       hostname: 'localhost',
       port: 9003,
       path: '/entries',
+      queryParams: {},
       contentType: 'application/json',
       headers: {
         'accept-encoding': 'gzip, deflate, br',
@@ -686,24 +691,4 @@ test('should return with status noaction when connection has no incomming', asyn
     status: 'noaction',
     error: 'Service not configured for listening',
   })
-})
-
-// Tests -- splitHost
-
-test('should split host', (t) => {
-  const host = 'the.host.com:3001'
-  const expected = ['the.host.com', 3001]
-
-  const ret = splitHost(host)
-
-  t.deepEqual(ret, expected)
-})
-
-test('should split host without port', (t) => {
-  const host = 'the.host.com'
-  const expected = ['the.host.com', undefined]
-
-  const ret = splitHost(host)
-
-  t.deepEqual(ret, expected)
 })

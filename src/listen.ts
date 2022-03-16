@@ -73,16 +73,6 @@ function statusCodeFromResponse(response: Response) {
   }
 }
 
-export function splitHost(host?: string) {
-  if (!host) {
-    return []
-  }
-  const portIndex = host.lastIndexOf(':')
-  const hostname = portIndex >= 0 ? host.slice(0, portIndex) : host
-  const port = Number.parseInt(host.slice(portIndex + 1), 10) || undefined
-  return [hostname, port]
-}
-
 async function readDataFromRequest(request: http.IncomingMessage) {
   const buffers = []
   for await (const chunk of request) {
@@ -91,11 +81,25 @@ async function readDataFromRequest(request: http.IncomingMessage) {
   return Buffer.concat(buffers).toString()
 }
 
+function parseUrl(request: http.IncomingMessage) {
+  if (request.url && request.headers.host) {
+    const parts = new URL(request.url, `http://${request.headers.host}`)
+    return [
+      parts.hostname,
+      parts.port && Number.parseInt(parts.port, 10),
+      parts.pathname,
+      Object.fromEntries(parts.searchParams.entries()),
+    ] as const
+  }
+
+  return []
+}
+
 async function actionFromRequest(
   request: http.IncomingMessage,
   incomingPort: number
 ) {
-  const [hostname, port] = splitHost(request.headers['host'])
+  const [hostname, port, path, queryParams] = parseUrl(request)
   const data = await readDataFromRequest(request)
 
   return {
@@ -105,7 +109,8 @@ async function actionFromRequest(
       method: request.method,
       hostname,
       port: port || incomingPort,
-      path: request.url,
+      path,
+      queryParams,
       contentType: contentTypeFromRequest(request),
       headers: request.headers as Record<string, string>,
     },
