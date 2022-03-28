@@ -14,13 +14,20 @@ test.after.always(() => {
 
 // Tests
 
-test('should send data and return status and data', async (t) => {
+test('should send data and return status, data, and headers', async (t) => {
   const data = '{"id":"ent1","title":"Entry 1"}'
   const scope = nock('http://json1.test', {
     reqheaders: { 'Content-Type': 'text/plain' },
   })
     .put('/entries/ent1', data)
-    .reply(200, { id: 'ent1' })
+    .reply(
+      200,
+      { id: 'ent1' },
+      {
+        'Content-Type': 'application/json; charset=UTF-8',
+        Expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
+      }
+    )
   const action = {
     type: 'SET',
     payload: { type: 'entry', data },
@@ -30,11 +37,16 @@ test('should send data and return status and data', async (t) => {
       }),
     },
   }
+  const expectedHeaders = {
+    'content-type': 'application/json; charset=UTF-8',
+    expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
+  }
 
   const ret = await send(action, null)
 
   t.is(ret.status, 'ok', ret.error)
   t.deepEqual(ret.data, '{"id":"ent1"}')
+  t.deepEqual(ret.headers, expectedHeaders)
   t.true(scope.isDone())
 })
 

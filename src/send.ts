@@ -1,7 +1,7 @@
 import debugFn from 'debug'
 import got, { HTTPError, Response as GotResponse, Options } from 'got'
 import queryString = require('query-string')
-import { Action, Response, EndpointOptions, Connection } from './types'
+import { Action, Response, Headers, EndpointOptions, Connection } from './types'
 
 const debug = debugFn('great:transporter:http')
 
@@ -39,12 +39,14 @@ const createResponse = (
   action: Action,
   status: string,
   data: unknown,
-  error?: string
+  error?: string,
+  headers?: Headers
 ): Response => ({
   ...action.response,
   status,
   ...(data !== undefined && data !== '' ? { data } : {}),
   ...(error !== undefined ? { error } : {}),
+  ...(headers ? { headers } : {}),
 })
 
 function createResponseWithError(action: Action, url: string, err: unknown) {
@@ -128,10 +130,7 @@ const generateQueryParams = (
     ...(authAsQuery && auth && auth !== true ? auth : {}),
   })
 
-const removeContentTypeIf = (
-  headers: Record<string, string>,
-  doRemove: boolean
-) =>
+const removeContentTypeIf = (headers: Headers, doRemove: boolean) =>
   doRemove
     ? Object.entries(headers).reduce(
         (headers, [key, value]) =>
@@ -145,9 +144,9 @@ const removeContentTypeIf = (
 const createHeaders = (
   options?: EndpointOptions,
   data?: unknown,
-  headers?: Record<string, unknown>,
+  headers?: Headers,
   auth?: Record<string, unknown> | boolean | null
-) => ({
+): Record<string, string | string[]> => ({
   'user-agent': 'integreat-transporter-http/0.1',
   ...(typeof data === 'string'
     ? { 'Content-Type': 'text/plain' }
@@ -208,7 +207,13 @@ export default async function send(
       GotResponse<string>
     >)
     const response = isOkResponse(gotResponse)
-      ? createResponse(action, 'ok', gotResponse.body)
+      ? createResponse(
+          action,
+          'ok',
+          gotResponse.body,
+          undefined,
+          gotResponse.headers
+        )
       : createResponseWithError(action, url, gotResponse)
     logResponse(response, { url, ...options })
     return response

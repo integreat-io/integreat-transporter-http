@@ -6,12 +6,14 @@ export interface IncomingOptions {
   port?: number
 }
 
+export type Headers = Record<string, string | string[] | undefined>
+
 export interface EndpointOptions extends Record<string, unknown> {
   baseUri?: string
   uri?: string
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   queryParams?: Record<string, unknown>
-  headers?: Record<string, string>
+  headers?: Headers
   incoming?: IncomingOptions
 }
 
@@ -56,7 +58,7 @@ export interface Payload<T = unknown> extends Record<string, unknown> {
   params?: Params
   uri?: string
   method?: string
-  headers?: Record<string, string>
+  headers?: Headers
   page?: number
   pageSize?: number
   pageAfter?: string
@@ -79,7 +81,7 @@ export interface Response<T = unknown> {
   warning?: string
   paging?: Paging
   params?: Params
-  headers?: Record<string, string>
+  headers?: Headers
 }
 
 export interface Action<P extends Payload = Payload, ResponseData = unknown> {
