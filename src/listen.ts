@@ -61,8 +61,10 @@ function statusCodeFromResponse(response: Response) {
       return 201
     case 'badrequest':
       return 400
-    case 'noaccess':
+    case 'autherror':
       return 401
+    case 'noaccess':
+      return 403
     case 'notfound':
     case 'noaction':
       return 404

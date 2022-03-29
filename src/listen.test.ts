@@ -314,6 +314,28 @@ test('should respond with 400 on badrequest', async (t) => {
 
 test('should respond with 401 on noaccess', async (t) => {
   const dispatch = sinon.stub().resolves({
+    status: 'autherror',
+    error: 'Invalid credentials',
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9024 },
+  }
+  const url = 'http://localhost:9024/entries'
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 401)
+
+  connection.server.close()
+})
+
+test('should respond with 403 on noaccess', async (t) => {
+  const dispatch = sinon.stub().resolves({
     status: 'noaccess',
     error: 'Above your paygrade',
   })
@@ -329,7 +351,7 @@ test('should respond with 401 on noaccess', async (t) => {
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 1)
-  t.is(response.statusCode, 401)
+  t.is(response.statusCode, 403)
 
   connection.server.close()
 })
