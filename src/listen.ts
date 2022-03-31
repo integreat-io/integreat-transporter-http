@@ -32,7 +32,10 @@ const actionMatchesOptions = (
   matchesPath(action.payload.path, options.path)
 
 const actionTypeFromRequest = (request: http.IncomingMessage) =>
-  request.method === 'GET' ? 'GET' : 'SET'
+  typeof request.method !== 'string' ||
+  ['GET', 'OPTIONS'].includes(request.method)
+    ? 'GET'
+    : 'SET'
 
 function contentTypeFromRequest(request: http.IncomingMessage) {
   const header = request.headers['content-type']

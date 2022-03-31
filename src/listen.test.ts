@@ -159,6 +159,48 @@ test('should dispatch PUT request as SET action', async (t) => {
   connection.server.close()
 })
 
+test('should dispatch OPTIONS request as GET action', async (t) => {
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: null })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9025 },
+  }
+  const url = 'http://localhost:9025/entries'
+  const options = {
+    method: 'OPTIONS' as const,
+  }
+  const expectedAction = {
+    type: 'GET',
+    payload: {
+      method: 'OPTIONS',
+      hostname: 'localhost',
+      port: 9025,
+      path: '/entries',
+      queryParams: {},
+      contentType: undefined,
+      headers: {
+        'accept-encoding': 'gzip, deflate, br',
+        connection: 'close',
+        host: 'localhost:9025',
+        'user-agent': 'got (https://github.com/sindresorhus/got)',
+      },
+    },
+    meta: {},
+  }
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.deepEqual(dispatch.args[0][0], expectedAction)
+  t.is(response.statusCode, 200)
+  t.is(response.headers['content-type'], 'application/json')
+
+  connection.server.close()
+})
+
 test('should dispatch other content-type', async (t) => {
   const requestData = `<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
