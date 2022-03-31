@@ -46,8 +46,17 @@ function contentTypeFromRequest(request: http.IncomingMessage) {
   return undefined
 }
 
-const contentTypeFromResponse = (response: Response) =>
-  (response.headers && response.headers['content-type']) || 'application/json'
+const normalizeHeaders = (
+  headers?: Record<string, string | string[] | undefined>
+) =>
+  headers
+    ? Object.fromEntries(
+        Object.entries(headers).map(([key, value]) => [
+          key.toLowerCase(),
+          value,
+        ])
+      )
+    : undefined
 
 const dataFromResponse = (response: Response) =>
   typeof response.data === 'string'
@@ -142,10 +151,12 @@ const createHandler = (
       const response = await dispatch(action)
 
       const responseDate = dataFromResponse(response)
-      const contentType = contentTypeFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
 
-      res.writeHead(statusCode, { 'Content-Type': contentType })
+      res.writeHead(statusCode, {
+        'content-type': 'application/json',
+        ...normalizeHeaders(response.headers),
+      })
       res.end(responseDate)
     } else {
       res.writeHead(404)

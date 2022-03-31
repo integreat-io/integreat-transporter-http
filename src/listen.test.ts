@@ -286,6 +286,60 @@ test('should stringify response data', async (t) => {
   connection.server.close()
 })
 
+test('should respond with response headers', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({
+    status: 'ok',
+    data: responseData,
+    headers: { 'X-SPECIAL': 'We are' },
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9026 },
+  }
+  const url = 'http://localhost:9026/entries?filter=all&format=json'
+  const options = {
+    headers: { 'Content-Type': 'application/json' },
+  }
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 200)
+  t.is(response.headers['x-special'], 'We are')
+
+  connection.server.close()
+})
+
+test('should use content type from response headers', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({
+    status: 'ok',
+    data: responseData,
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9027 },
+  }
+  const url = 'http://localhost:9027/entries?filter=all&format=json'
+  const options = {}
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 200)
+  t.is(response.headers['content-type'], 'application/x-www-form-urlencoded')
+
+  connection.server.close()
+})
+
 test('should respond with 201 on queued', async (t) => {
   const dispatch = sinon.stub().resolves({
     status: 'queued',
