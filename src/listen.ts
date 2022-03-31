@@ -51,10 +51,9 @@ const normalizeHeaders = (
 ) =>
   headers
     ? Object.fromEntries(
-        Object.entries(headers).map(([key, value]) => [
-          key.toLowerCase(),
-          value,
-        ])
+        Object.entries(headers)
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key.toLowerCase(), value])
       )
     : undefined
 
@@ -153,11 +152,18 @@ const createHandler = (
       const responseDate = dataFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
 
-      res.writeHead(statusCode, {
-        'content-type': 'application/json',
-        ...normalizeHeaders(response.headers),
-      })
-      res.end(responseDate)
+      try {
+        res.writeHead(statusCode, {
+          'content-type': 'application/json',
+          ...normalizeHeaders(response.headers),
+        })
+        res.end(responseDate)
+      } catch (error) {
+        res.writeHead(500)
+        res.end(
+          JSON.stringify({ status: 'error', error: 'Internal server error' })
+        )
+      }
     } else {
       res.writeHead(404)
       res.end()

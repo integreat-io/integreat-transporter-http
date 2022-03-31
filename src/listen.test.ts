@@ -314,6 +314,35 @@ test('should respond with response headers', async (t) => {
   connection.server.close()
 })
 
+test('should skip response headers with value undefined', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({
+    status: 'ok',
+    data: responseData,
+    headers: {
+      'X-SPECIAL': 'We are',
+      'Access-Control-Allow-Origin': undefined,
+    },
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9028 },
+  }
+  const url = 'http://localhost:9028/entries'
+  const options = { retry: 0, throwHttpErrors: false }
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 200)
+  t.false(response.headers.hasOwnProperty('access-control-allow-origin'))
+
+  connection.server.close()
+})
+
 test('should use content type from response headers', async (t) => {
   const responseData = JSON.stringify([{ id: 'ent1' }])
   const dispatch = sinon.stub().resolves({
@@ -339,6 +368,8 @@ test('should use content type from response headers', async (t) => {
 
   connection.server.close()
 })
+
+test.todo('should remove response headers with value undefined')
 
 test('should respond with 201 on queued', async (t) => {
   const dispatch = sinon.stub().resolves({
