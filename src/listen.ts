@@ -1,3 +1,4 @@
+import debugFn from 'debug'
 import http = require('http')
 import {
   Dispatch,
@@ -6,6 +7,8 @@ import {
   Response,
   Action,
 } from './types'
+
+const debug = debugFn('integreat:transporter:http')
 
 const services: Record<number, [Dispatch, ConnectionIncomingOptions][]> = {}
 
@@ -175,6 +178,7 @@ export default async function listen(
   connection: Connection | null
 ): Promise<Response> {
   if (!connection) {
+    debug('Cannot listen to server. No connection')
     return {
       status: 'badrequest',
       error: 'Cannot listen to server. No connection',
@@ -184,18 +188,21 @@ export default async function listen(
   const { incoming, server } = connection
 
   if (!incoming) {
+    debug('Service not configured for listening')
     return {
       status: 'noaction',
       error: 'Service not configured for listening',
     }
   }
   if (!server) {
+    debug('Cannot listen to server. No server set on connection')
     return {
       status: 'badrequest',
       error: 'Cannot listen to server. No server set on connection',
     }
   }
   if (!incoming.port) {
+    debug('Cannot listen to server. No port set on incoming options')
     return {
       status: 'badrequest',
       error: 'Cannot listen to server. No port set on incoming options',
@@ -209,6 +216,7 @@ export default async function listen(
 
   // Set up listener if this is the first service to listen on this port
   if (ourServices.length === 0) {
+    debug(`Set up request handler for first service on port ${incoming.port}`)
     server.on('request', createHandler(ourServices, incoming.port))
   }
 
@@ -217,15 +225,19 @@ export default async function listen(
 
   // Start listening on port if we're not already listening
   if (!server.listening) {
+    debug(`Start listening to first service on port ${incoming.port}`)
+    let error: Error | null = null
+
     server.on('error', (e) => {
       error = e
     })
-    let error: Error | null = null
 
     // Start listening
     try {
       server.listen(incoming.port)
+      debug(`Listening on port ${incoming.port}`)
     } catch (error) {
+      debug(`Cannot listen to server on port ${incoming.port}. ${error}`)
       return {
         status: 'error',
         error: `Cannot listen to server on port ${incoming.port}. ${error}`,
@@ -236,14 +248,18 @@ export default async function listen(
     return new Promise((resolve, _reject) => {
       setTimeout(() => {
         if (error) {
+          debug(
+            `Server on port ${incoming.port} gave an error after it was started: ${error}`
+          )
           resolve({
             status: 'error',
             error: `Cannot listen to server on port ${incoming.port}. ${error}`,
           })
         } else {
+          debug(`No error from server on port ${incoming.port} after 200 ms`)
           resolve({ status: 'ok' })
         }
-      }, 100)
+      }, 200)
     })
   }
 
