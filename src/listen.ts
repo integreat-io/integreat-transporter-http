@@ -177,6 +177,8 @@ export default async function listen(
   dispatch: Dispatch,
   connection: Connection | null
 ): Promise<Response> {
+  debug('Start listening ...')
+
   if (!connection) {
     debug('Cannot listen to server. No connection')
     return {
