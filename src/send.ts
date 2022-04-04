@@ -3,7 +3,7 @@ import got, { HTTPError, Response as GotResponse, Options } from 'got'
 import queryString = require('query-string')
 import { Action, Response, Headers, EndpointOptions, Connection } from './types'
 
-const debug = debugFn('great:transporter:http')
+const debug = debugFn('integreat:transporter:http')
 
 const isGotResponse = (response: unknown): response is GotResponse =>
   !!response &&
