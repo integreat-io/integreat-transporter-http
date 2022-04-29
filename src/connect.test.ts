@@ -77,12 +77,14 @@ test('should set incoming options on connection', async (t) => {
       host: 'test2.api',
       path: '/entries',
       port: 3000,
+      sourceService: 'mainApi',
     },
   }
   const expectedIncoming = {
     host: ['test2.api'],
     path: ['/entries'],
     port: 3000,
+    sourceService: 'mainApi',
   }
 
   const ret = await connect(options, null, null)
@@ -105,6 +107,7 @@ test('should use 8080 as default port when not set in incoming options', async (
     host: ['test3.api'],
     path: ['/entries'],
     port: 8080,
+    sourceService: undefined,
   }
 
   const ret = await connect(options, null, null)

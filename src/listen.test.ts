@@ -41,7 +41,12 @@ test('should dispatch GET request as GET action and respond with response', asyn
   const connection = {
     status: 'ok',
     server: http.createServer(),
-    incoming: { host: ['localhost'], path: ['/entries'], port: 9002 },
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9002,
+      sourceService: 'mainApi',
+    },
   }
   const url = 'http://localhost:9002/entries?filter=all&format=json'
   const options = {
@@ -66,6 +71,7 @@ test('should dispatch GET request as GET action and respond with response', asyn
         host: 'localhost:9002',
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
+      sourceService: 'mainApi',
     },
     meta: {},
   }
@@ -115,6 +121,7 @@ test('should dispatch POST request as SET action', async (t) => {
         host: 'localhost:9003',
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
+      sourceService: undefined,
     },
     meta: {},
   }
@@ -185,6 +192,7 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
         host: 'localhost:9025',
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
+      sourceService: undefined,
     },
     meta: {},
   }

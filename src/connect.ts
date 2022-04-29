@@ -6,6 +6,7 @@ const prepareIncoming = (incoming: IncomingOptions) => ({
   host: ensureArray(incoming.host),
   path: ensureArray(incoming.path),
   port: incoming.port || 8080,
+  sourceService: incoming.sourceService,
 })
 
 const servers: Record<number, http.Server> = {}

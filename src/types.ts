@@ -4,6 +4,7 @@ export interface IncomingOptions {
   host?: string | string[]
   path?: string | string[]
   port?: number
+  sourceService?: string
 }
 
 export type Headers = Record<string, string | string[] | undefined>
@@ -95,6 +96,7 @@ export interface ConnectionIncomingOptions {
   host: string[]
   path: string[]
   port: number
+  sourceService?: string
 }
 
 export interface Connection extends Record<string, unknown> {

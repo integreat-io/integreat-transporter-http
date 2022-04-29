@@ -134,6 +134,14 @@ async function actionFromRequest(
   }
 }
 
+const setSourceService = (action: Action, sourceService?: string) => ({
+  ...action,
+  payload: {
+    ...action.payload,
+    sourceService,
+  },
+})
+
 const createHandler = (
   ourServices: [Dispatch, ConnectionIncomingOptions][],
   incomingPort: number
@@ -143,14 +151,16 @@ const createHandler = (
     res: http.ServerResponse
   ) {
     const action = await actionFromRequest(req, incomingPort)
+    debug(`Incoming action: ${JSON.stringify(action)}`)
 
-    const [dispatch] =
+    const [dispatch, options] =
       ourServices.find(([, options]) =>
         actionMatchesOptions(action, options)
       ) || []
 
     if (dispatch) {
-      const response = await dispatch(action)
+      const sourceService = options?.sourceService
+      const response = await dispatch(setSourceService(action, sourceService))
 
       const responseDate = dataFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
