@@ -9,6 +9,7 @@ import {
 } from './types'
 
 const debug = debugFn('integreat:transporter:http')
+const debugHeaders = debugFn('integreat:transporter:http:headers')
 
 const services: Record<number, [Dispatch, ConnectionIncomingOptions][]> = {}
 
@@ -151,7 +152,10 @@ const createHandler = (
     res: http.ServerResponse
   ) {
     const action = await actionFromRequest(req, incomingPort)
-    debug(`Incoming action: ${JSON.stringify(action)}`)
+    debug(
+      `Incoming action: ${action.type} ${action.payload.method} ${action.payload.path} ${action.payload.queryParams} ${action.payload.contentType}`
+    )
+    debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
 
     const [dispatch, options] =
       ourServices.find(([, options]) =>
