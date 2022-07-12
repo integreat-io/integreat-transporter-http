@@ -192,6 +192,30 @@ test('should encode query params correctly', async (t) => {
   t.is(ret.status, 'ok', ret.error)
   t.true(scope.isDone())
 })
+test('should set several query params with the same name from array', async (t) => {
+  const scope = nock('http://json26.test')
+    .get('/entries?expand%5B%5D=data.user&expand%5B%5D=data.images&order=desc')
+    .reply(200, [{ id: 'ent1' }])
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry' },
+    meta: {
+      options: prepareOptions({
+        baseUri: 'http://json26.test',
+        uri: '/entries',
+        queryParams: {
+          'expand[]': ['data.user', 'data.images'],
+          order: 'desc',
+        },
+      }),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  t.is(ret.status, 'ok', ret.error)
+  t.true(scope.isDone())
+})
 
 test('should force query param values to string', async (t) => {
   const scope = nock('http://json22.test')

@@ -3,6 +3,9 @@ import got, { HTTPError, Response as GotResponse, Options } from 'got'
 import queryString = require('query-string')
 import { Action, Response, Headers, EndpointOptions, Connection } from './types'
 
+type URLSearchArray = readonly [string, string][]
+type KeyVal = [string, string]
+
 const debug = debugFn('integreat:transporter:http')
 
 const isGotResponse = (response: unknown): response is GotResponse =>
@@ -101,23 +104,29 @@ function extractQueryParamsFromUri(uri?: string) {
   return {}
 }
 
-const isValidQueryValue = (value: unknown) =>
-  ['string', 'number', 'boolean'].includes(typeof value) || value === null
-
-const prepareQueryValue = (value: unknown) =>
+const prepareQueryValue = (value: unknown): string =>
   value instanceof Date
     ? value.toISOString()
-    : isValidQueryValue(value)
-    ? value
+    : value === null
+    ? ''
+    : ['string', 'number', 'boolean'].includes(typeof value)
+    ? String(value)
     : JSON.stringify(value)
 
 const prepareQueryParams = (params: Record<string, unknown>) =>
-  Object.entries(params).reduce(
-    (params, [key, value]) =>
-      value === undefined
-        ? params // Don't include undefined
-        : { ...params, [key]: prepareQueryValue(value) },
-    {}
+  new URLSearchParams(
+    Object.entries(params)
+      .filter(([_key, value]) => value !== undefined)
+      .reduce(
+        (params, [key, value]) =>
+          Array.isArray(value)
+            ? [
+                ...params,
+                ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
+              ]
+            : [...params, [key, prepareQueryValue(value)] as KeyVal],
+        [] as KeyVal[]
+      ) as URLSearchArray
   )
 
 const generateQueryParams = (
