@@ -13,6 +13,13 @@ const isGotResponse = (response: unknown): response is GotResponse =>
   typeof response === 'object' &&
   typeof (response as GotResponse).statusCode === 'number'
 
+function prepareLogUrl(url: string, query: URLSearchParams) {
+  const searchIndex = url.indexOf('?')
+  const bareUrl = searchIndex >= 0 ? url.slice(0, searchIndex) : url
+  const querystring = query.toString()
+  return querystring ? `${bareUrl}?${querystring}` : bareUrl
+}
+
 const logRequest = (request: Options) => {
   const message = `Sending ${request.method} ${request.url}`
   debug('%s: %o %s', message, request.headers, request.body)
@@ -209,8 +216,13 @@ export default async function send(
     )
   }
 
+  const logOptions = {
+    url: prepareLogUrl(url, options.searchParams),
+    ...options,
+  }
+
   try {
-    logRequest({ url, ...options })
+    logRequest(logOptions)
     // Type hack, as the CancelableRequest type returned by got is not identified as a Promise
     const gotResponse = await (got(url, options) as unknown as Promise<
       GotResponse<string>
@@ -224,7 +236,7 @@ export default async function send(
           gotResponse.headers
         )
       : createResponseWithError(action, url, gotResponse)
-    logResponse(response, { url, ...options })
+    logResponse(response, logOptions)
     return response
   } catch (error) {
     return createResponseWithError(action, url, error)
