@@ -1,6 +1,7 @@
 import debugFn from 'debug'
 import got, { HTTPError, Response as GotResponse, Options } from 'got'
 import queryString = require('query-string')
+import { isDate } from './utils/is'
 import { Action, Response, Headers, EndpointOptions, Connection } from './types'
 
 type URLSearchArray = readonly [string, string][]
@@ -112,7 +113,7 @@ function extractQueryParamsFromUri(uri?: string) {
 }
 
 const prepareQueryValue = (value: unknown): string =>
-  value instanceof Date
+  isDate(value)
     ? value.toISOString()
     : value === null
     ? ''
