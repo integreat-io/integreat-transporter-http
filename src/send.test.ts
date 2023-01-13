@@ -1,8 +1,8 @@
 import test from 'ava'
 import nock = require('nock')
-import transporter from '.'
+import transporter from './index.js'
 
-import send from './send'
+import send from './send.js'
 
 // Setup
 
@@ -15,7 +15,7 @@ test.after.always(() => {
 // Tests
 
 test('should send data and return status, data, and headers', async (t) => {
-  const data = '{"id":"ent1","title":"Entry 1"}'
+  const data = 'Plain text'
   const scope = nock('http://json1.test', {
     reqheaders: { 'Content-Type': 'text/plain' },
   })

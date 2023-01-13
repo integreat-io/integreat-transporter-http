@@ -6,7 +6,7 @@ import {
   ConnectionIncomingOptions,
   Response,
   Action,
-} from './types'
+} from './types.js'
 
 const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')

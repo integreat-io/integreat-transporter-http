@@ -1,6 +1,6 @@
 import http = require('http')
-import { ensureArray } from './utils/array'
-import { Connection, EndpointOptions, IncomingOptions } from './types'
+import { ensureArray } from './utils/array.js'
+import { Connection, EndpointOptions, IncomingOptions } from './types.js'
 
 const prepareIncoming = (incoming: IncomingOptions) => ({
   host: ensureArray(incoming.host),

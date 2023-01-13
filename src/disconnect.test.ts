@@ -2,7 +2,7 @@ import test from 'ava'
 import sinon = require('sinon')
 import http = require('http')
 
-import disconnect from './disconnect'
+import disconnect from './disconnect.js'
 
 // Tests
 

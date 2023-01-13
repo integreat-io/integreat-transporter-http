@@ -1,6 +1,6 @@
 import test from 'ava'
 
-import connect from './connect'
+import connect from './connect.js'
 
 // Tests
 

@@ -2,9 +2,9 @@ import test from 'ava'
 import sinon = require('sinon')
 import http = require('http')
 import got from 'got'
-import { Connection } from './types'
+import { Connection } from './types.js'
 
-import listen from './listen'
+import listen from './listen.js'
 
 // Setup
 
@@ -12,7 +12,7 @@ const options = {
   method: 'GET' as const,
   headers: { 'Content-Type': 'application/json' },
   throwHttpErrors: false,
-  retry: 0,
+  retry: { limit: 0 },
 }
 
 // Tests
@@ -338,7 +338,7 @@ test('should skip response headers with value undefined', async (t) => {
     incoming: { host: ['localhost'], path: ['/entries'], port: 9028 },
   }
   const url = 'http://localhost:9028/entries'
-  const options = { retry: 0, throwHttpErrors: false }
+  const options = { retry: { limit: 0 }, throwHttpErrors: false }
 
   const ret = await listen(dispatch, connection)
   const response = await got(url, options)

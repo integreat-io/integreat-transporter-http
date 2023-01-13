@@ -1,8 +1,14 @@
 import debugFn from 'debug'
 import got, { HTTPError, Response as GotResponse, Options } from 'got'
-import queryString = require('query-string')
-import { isDate } from './utils/is'
-import { Action, Response, Headers, EndpointOptions, Connection } from './types'
+import queryString from 'query-string'
+import { isDate } from './utils/is.js'
+import {
+  Action,
+  Response,
+  Headers,
+  EndpointOptions,
+  Connection,
+} from './types.js'
 
 type URLSearchArray = readonly [string, string][]
 type KeyVal = [string, string]
@@ -21,12 +27,12 @@ function prepareLogUrl(url: string, query: URLSearchParams) {
   return querystring ? `${bareUrl}?${querystring}` : bareUrl
 }
 
-const logRequest = (request: Options) => {
+const logRequest = (request: Partial<Options>) => {
   const message = `Sending ${request.method} ${request.url}`
   debug('%s: %o %s', message, request.headers, request.body)
 }
 
-const logResponse = (response: Response, { url, method }: Options) => {
+const logResponse = (response: Response, { url, method }: Partial<Options>) => {
   const { status, error } = response
   const message =
     status === 'ok'
@@ -185,7 +191,7 @@ function optionsFromEndpoint({
 }: Action) {
   const method = selectMethod(options, payload.data)
   return {
-    prefixUrl: options?.baseUri as string | undefined,
+    prefixUrl: options?.baseUri || '',
     url: generateUrl(options),
     searchParams: generateQueryParams(options, auth),
     method,
@@ -194,7 +200,7 @@ function optionsFromEndpoint({
       createHeaders(options, payload.data, payload.headers, auth),
       method === 'GET'
     ),
-    retry: 0,
+    retry: { limit: 0 },
     throwHttpErrors: false,
   }
 }
@@ -224,10 +230,7 @@ export default async function send(
 
   try {
     logRequest(logOptions)
-    // Type hack, as the CancelableRequest type returned by got is not identified as a Promise
-    const gotResponse = await (got(url, options) as unknown as Promise<
-      GotResponse<string>
-    >)
+    const gotResponse = await got<string>(url, options)
     const response = isOkResponse(gotResponse)
       ? createResponse(
           action,

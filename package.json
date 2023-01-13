@@ -9,16 +9,22 @@
   ],
   "author": "Kjell-Morten Bratsberg Thorsen <kjellmorten@integreat.io> (https://integreat.io/)",
   "license": "ISC",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "npm run build && nyc --reporter=text-summary ava --config ava-dist.config.cjs",
+    "test": "npm run lint && npm run build && c8 --reporter=text-summary ava --config ./ava-dist.config.js",
     "test:inspect": "node --inspect node_modules/ava/profile.js",
     "test:watch": "npm run dev",
     "dev": "ava --watch",
     "build": "tsc",
-    "coverage": "nyc report --reporter=text-lcov | coveralls",
-    "nyc:report": "nyc report --reporter=text --reporter=html",
+    "coverage": "c8 report",
     "lint": "eslint --ext .ts src"
   },
   "engines": {
@@ -26,16 +32,15 @@
   },
   "dependencies": {
     "@types/debug": "^4.1.7",
-    "@types/node": "^18.11.7",
-    "caniuse-lite": "^1.0.30001426",
+    "@types/node": "^18.11.18",
     "debug": "^4.3.4",
-    "got": "^11.8.5",
-    "query-string": "^7.1.1"
+    "got": "^12.5.3",
+    "query-string": "^8.1.0"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^2.3.1",
+    "@integreat/ts-dev-setup": "^4.0.0",
     "@types/sinon": "^10.0.13",
-    "nock": "^13.2.9",
-    "sinon": "^14.0.1"
+    "nock": "^13.3.0",
+    "sinon": "^15.0.1"
   }
 }

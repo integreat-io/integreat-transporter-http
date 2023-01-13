@@ -1,8 +1,6 @@
 module.exports = {
-  extensions: ['ts'],
-  // environmentVariables: {
-  //   DEBUG: 'integreat:transporter:http',
-  // },
-  require: ['ts-node/register/transpile-only'],
+  extensions: { ts: 'module' },
+  nodeArguments: ['--loader=ts-node/esm', '--no-warnings'],
+  ignoredByWatcher: ['{.nyc_output,dist,media}/**'],
   files: ['src/**/*.test.ts'],
 }
