@@ -71,6 +71,28 @@ test('should use GET method as default when no data', async (t) => {
   t.true(scope.isDone())
 })
 
+test('should disregard data when GET method is specified', async (t) => {
+  const scope = nock('http://json2.test', { badheaders: ['Content-Type'] })
+    .get('/entries/ent1')
+    .reply(200, { id: 'ent1', type: 'entry' })
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', data: [{ id: 'ent1', $type: 'entry' }] },
+    meta: {
+      options: prepareOptions({
+        uri: 'http://json2.test/entries/ent1',
+        method: 'GET',
+      }),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  t.is(ret.status, 'ok', ret.error)
+  t.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
+  t.true(scope.isDone())
+})
+
 test('should convert all non-string data to JSON', async (t) => {
   const data = { id: 'ent1', title: 'Entry 1' }
   const scope = nock('http://json18.test', {

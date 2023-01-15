@@ -195,7 +195,7 @@ function optionsFromEndpoint({
     url: generateUrl(options),
     searchParams: generateQueryParams(options, auth),
     method,
-    body: prepareBody(payload.data),
+    body: method === 'GET' ? undefined : prepareBody(payload.data),
     headers: removeContentTypeIf(
       createHeaders(options, payload.data, payload.headers, auth),
       method === 'GET'
