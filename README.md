@@ -45,12 +45,19 @@ Example source configuration:
 }
 ```
 
-Data will be sent with content-type `application/json`.
+Available options for action meta options:
 
-An optional logger may be provided to the `jsonAdapter()` function, to log out
-the request sent to the service, and its response. The logger must be an object
-with an `info()` and an `error()` function. Both should accept a string message
-as first argument, and a meta object as the second.
+- `uri`: The request uri
+- `baseUri`: Used as a base for the `uri`, if provided
+- `queryParams`: An object of query parameters to use for the request. The
+  keys and values of the object will be keys and values in the query string.
+  Value will be forced to strings
+- `authAsQuery`: When set to `true`, auth object will be included as query
+  params. Use with care
+- `headers`: An object of key/value pairs use directly as request headers
+- `responseFormat`: Controls what format the body data is returned in. `base64`
+  will encode the raw body buffer as base64, while `string` will simply return
+  the body as a string. Default is `string`
 
 ### Running the tests
 

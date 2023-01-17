@@ -16,6 +16,7 @@ export interface EndpointOptions extends Record<string, unknown> {
   queryParams?: Record<string, unknown>
   headers?: Headers
   incoming?: IncomingOptions
+  responseFormat?: string
 }
 
 export interface Ident {

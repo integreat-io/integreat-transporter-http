@@ -208,11 +208,20 @@ function optionsFromEndpoint({
 const isOkResponse = (gotResponse: GotResponse) =>
   gotResponse.statusCode >= 200 && gotResponse.statusCode < 400
 
+function extractResponseData(response: GotResponse, format: string) {
+  if (format === 'base64') {
+    return response.rawBody.toString('base64')
+  } else {
+    return response.body
+  }
+}
+
 export default async function send(
   action: Action,
   _connection: Connection | null
 ): Promise<Response> {
   const { url, ...options } = optionsFromEndpoint(action)
+  const { responseFormat = 'string' } = action.meta?.options || {}
 
   if (!url) {
     return createResponse(
@@ -235,7 +244,7 @@ export default async function send(
       ? createResponse(
           action,
           'ok',
-          gotResponse.body,
+          extractResponseData(gotResponse, responseFormat),
           undefined,
           gotResponse.headers
         )

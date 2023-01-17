@@ -50,6 +50,43 @@ test('should send data and return status, data, and headers', async (t) => {
   t.true(scope.isDone())
 })
 
+test('should return buffer data as base64 when meta.options.responseFormat is base64', async (t) => {
+  const data = 'Plain text'
+  const scope = nock('http://json1.test', {
+    reqheaders: { 'Content-Type': 'text/plain' },
+  })
+    .put('/entries/ent1', data)
+    .reply(
+      200,
+      { id: 'ent1' },
+      {
+        'Content-Type': 'application/json; charset=UTF-8',
+        Expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
+      }
+    )
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data },
+    meta: {
+      options: prepareOptions({
+        uri: 'http://json1.test/entries/ent1',
+        responseFormat: 'base64',
+      }),
+    },
+  }
+  const expectedHeaders = {
+    'content-type': 'application/json; charset=UTF-8',
+    expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
+  }
+
+  const ret = await send(action, null)
+
+  t.is(ret.status, 'ok', ret.error)
+  t.deepEqual(ret.data, 'eyJpZCI6ImVudDEifQ==')
+  t.deepEqual(ret.headers, expectedHeaders)
+  t.true(scope.isDone())
+})
+
 test('should use GET method as default when no data', async (t) => {
   const scope = nock('http://json2.test', { badheaders: ['Content-Type'] })
     .get('/entries/ent1')
