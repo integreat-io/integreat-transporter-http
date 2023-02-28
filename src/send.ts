@@ -85,8 +85,8 @@ function createResponseWithError(action: Action, url: string, err: unknown) {
       case 403:
         response.status = 'noaccess'
         response.error = action.meta?.auth
-          ? 'Not authorized'
-          : 'Service requires authentication'
+          ? `Not authorized (${statusCode})`
+          : `Service requires authentication (${statusCode})`
         break
       case 404:
         response.status = 'notfound'

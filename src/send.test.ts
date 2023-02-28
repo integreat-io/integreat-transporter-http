@@ -509,7 +509,7 @@ test('should reject on 401 with auth', async (t) => {
   const ret = await send(action, null)
 
   t.is(ret.status, 'noaccess', ret.error)
-  t.is(ret.error, 'Not authorized')
+  t.is(ret.error, 'Not authorized (401)')
 })
 
 test('should reject on 401 without auth', async (t) => {
@@ -528,7 +528,7 @@ test('should reject on 401 without auth', async (t) => {
   const ret = await send(action, null)
 
   t.is(ret.status, 'noaccess', ret.error)
-  t.is(ret.error, 'Service requires authentication')
+  t.is(ret.error, 'Service requires authentication (401)')
 })
 
 test('should reject on 403 ', async (t) => {
@@ -547,7 +547,7 @@ test('should reject on 403 ', async (t) => {
   const ret = await send(action, null)
 
   t.is(ret.status, 'noaccess', ret.error)
-  t.is(typeof ret.error, 'string')
+  t.is(ret.error, 'Service requires authentication (403)')
 })
 
 test('should send with headers from endpoint', async (t) => {
