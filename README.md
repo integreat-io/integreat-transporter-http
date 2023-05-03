@@ -4,6 +4,9 @@ Transporter that lets
 [Integreat](https://github.com/integreat-io/integreat) send and receive data
 over http/https.
 
+[![npm Version](https://img.shields.io/npm/v/integreat-transporter-http.svg)](https://www.npmjs.com/package/integreat-transporter-http)
+[![Maintainability](https://api.codeclimate.com/v1/badges/6abe9cf4601fe08a18b8/maintainability)](https://codeclimate.com/github/integreat-io/integreat-transporter-http/maintainability)
+
 ## Getting started
 
 ### Prerequisits
