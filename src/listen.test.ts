@@ -1,8 +1,8 @@
 import test from 'ava'
-import sinon = require('sinon')
-import http = require('http')
+import sinon from 'sinon'
+import http from 'http'
 import got from 'got'
-import { Connection } from './types.js'
+import type { Connection } from './types.js'
 
 import listen from './listen.js'
 

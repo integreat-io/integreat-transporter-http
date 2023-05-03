@@ -1,12 +1,7 @@
 import debugFn from 'debug'
-import http = require('http')
-import {
-  Dispatch,
-  Connection,
-  ConnectionIncomingOptions,
-  Response,
-  Action,
-} from './types.js'
+import http from 'http'
+import type { Dispatch, Response, Action } from 'integreat'
+import type { Connection, ConnectionIncomingOptions } from './types.js'
 
 const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')

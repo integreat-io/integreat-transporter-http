@@ -2,7 +2,8 @@ import connect from './connect.js'
 import send from './send.js'
 import listen from './listen.js'
 import disconnect from './disconnect.js'
-import { EndpointOptions, Transporter } from './types.js'
+import type { Transporter } from 'integreat'
+import type { EndpointOptions } from './types.js'
 
 /**
  * HTTP Transporter for Integreat

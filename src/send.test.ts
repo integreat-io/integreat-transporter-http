@@ -1,5 +1,5 @@
 import test from 'ava'
-import nock = require('nock')
+import nock from 'nock'
 import transporter from './index.js'
 
 import send from './send.js'
@@ -7,6 +7,7 @@ import send from './send.js'
 // Setup
 
 const { prepareOptions } = transporter
+const serviceId = 'http'
 
 test.after.always(() => {
   nock.restore()
@@ -32,9 +33,12 @@ test('should send data and return status, data, and headers', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json1.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json1.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
   const expectedHeaders = {
@@ -68,10 +72,13 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
     type: 'SET',
     payload: { type: 'entry', data },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json1.test/entries/ent1',
-        responseFormat: 'base64',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json1.test/entries/ent1',
+          responseFormat: 'base64',
+        },
+        serviceId
+      ),
     },
   }
   const expectedHeaders = {
@@ -95,9 +102,12 @@ test('should use GET method as default when no data', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json2.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json2.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -116,10 +126,13 @@ test('should disregard data when GET method is specified', async (t) => {
     type: 'GET',
     payload: { type: 'entry', data: [{ id: 'ent1', $type: 'entry' }] },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json2.test/entries/ent1',
-        method: 'GET',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json2.test/entries/ent1',
+          method: 'GET',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -141,9 +154,12 @@ test('should convert all non-string data to JSON', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json18.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json18.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -163,10 +179,13 @@ test('should use method from endpoint', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json3.test/entries/ent1',
-        method: 'POST' as const,
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json3.test/entries/ent1',
+          method: 'POST' as const,
+        },
+        serviceId
+      ),
     },
   }
 
@@ -186,10 +205,13 @@ test('should support base url', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data: '{"id":"ent1","title":"Entry 1"}' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json19.test/',
-        uri: '/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          baseUri: 'http://json19.test/',
+          uri: '/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -208,14 +230,17 @@ test('should set query params from options', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json20.test',
-        uri: '/entries',
-        queryParams: {
-          createdAfter: '2020-04-18T11:19:45.000Z',
-          order: 'desc',
+      options: prepareOptions(
+        {
+          baseUri: 'http://json20.test',
+          uri: '/entries',
+          queryParams: {
+            createdAfter: '2020-04-18T11:19:45.000Z',
+            order: 'desc',
+          },
         },
-      }),
+        serviceId
+      ),
     },
   }
 
@@ -235,14 +260,17 @@ test('should encode query params correctly', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json21.test',
-        uri: '/entries',
-        queryParams: {
-          order: 'desc',
-          query: "*[_type=='table'&&key==$table][0].fields{key,name,type}",
+      options: prepareOptions(
+        {
+          baseUri: 'http://json21.test',
+          uri: '/entries',
+          queryParams: {
+            order: 'desc',
+            query: "*[_type=='table'&&key==$table][0].fields{key,name,type}",
+          },
         },
-      }),
+        serviceId
+      ),
     },
   }
 
@@ -259,14 +287,17 @@ test('should set several query params with the same name from array', async (t) 
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json26.test',
-        uri: '/entries',
-        queryParams: {
-          'expand[]': ['data.user', 'data.images'],
-          order: 'desc',
+      options: prepareOptions(
+        {
+          baseUri: 'http://json26.test',
+          uri: '/entries',
+          queryParams: {
+            'expand[]': ['data.user', 'data.images'],
+            order: 'desc',
+          },
         },
-      }),
+        serviceId
+      ),
     },
   }
 
@@ -289,15 +320,18 @@ test('should force query param values to string', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json22.test',
-        uri: '/entries',
-        queryParams: {
-          createdAfter: new Date('2020-04-18T11:19:45.000Z'),
-          desc: true,
-          obj: {},
+      options: prepareOptions(
+        {
+          baseUri: 'http://json22.test',
+          uri: '/entries',
+          queryParams: {
+            createdAfter: new Date('2020-04-18T11:19:45.000Z'),
+            desc: true,
+            obj: {},
+          },
         },
-      }),
+        serviceId
+      ),
     },
   }
 
@@ -316,14 +350,17 @@ test('should exclude query params with undefined value', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json23.test',
-        uri: '/entries',
-        queryParams: {
-          order: 'desc',
-          exclude: undefined,
+      options: prepareOptions(
+        {
+          baseUri: 'http://json23.test',
+          uri: '/entries',
+          queryParams: {
+            order: 'desc',
+            exclude: undefined,
+          },
         },
-      }),
+        serviceId
+      ),
     },
   }
 
@@ -342,11 +379,14 @@ test('should set query params from options when uri has query string', async (t)
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        baseUri: 'http://json17.test',
-        uri: '/entries?page=1',
-        queryParams: { order: 'desc' },
-      }),
+      options: prepareOptions(
+        {
+          baseUri: 'http://json17.test',
+          uri: '/entries?page=1',
+          queryParams: { order: 'desc' },
+        },
+        serviceId
+      ),
     },
   }
 
@@ -365,9 +405,12 @@ test('should return ok status on all 200-range statuses', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json4.test/entries/ent2',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json4.test/entries/ent2',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -383,9 +426,12 @@ test('should return error on not found', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json5.test/entries/unknown',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json5.test/entries/unknown',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -402,9 +448,12 @@ test('should return error on other error', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json6.test/entries/error',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json6.test/entries/error',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -423,9 +472,12 @@ test('should return response on error', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json25.test/entries/error',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json25.test/entries/error',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -444,9 +496,12 @@ test('should return error on request error', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json7.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json7.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -462,9 +517,12 @@ test('should respond with badrequest on 400', async (t) => {
     payload: { type: 'entry', data: '{}' },
     meta: {
       auth: {},
-      options: prepareOptions({
-        uri: 'http://json8.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json8.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -481,9 +539,12 @@ test('should respond with timeout on 408', async (t) => {
     payload: { type: 'entry', data: '{}' },
     meta: {
       auth: {},
-      options: prepareOptions({
-        uri: 'http://json9.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json9.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -500,9 +561,12 @@ test('should reject on 401 with auth', async (t) => {
     payload: { type: 'entry', data: '{}' },
     meta: {
       auth: {},
-      options: prepareOptions({
-        uri: 'http://json10.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json10.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -519,9 +583,12 @@ test('should reject on 401 without auth', async (t) => {
     payload: { type: 'entry', data: '{}' },
     meta: {
       auth: null,
-      options: prepareOptions({
-        uri: 'http://json11.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json11.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -538,9 +605,12 @@ test('should reject on 403 ', async (t) => {
     payload: { type: 'entry', data: '{}' },
     meta: {
       auth: null,
-      options: prepareOptions({
-        uri: 'http://json12.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json12.test/entries/ent1',
+        },
+        serviceId
+      ),
     },
   }
 
@@ -564,10 +634,13 @@ test('should send with headers from endpoint', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data: '{}' },
     meta: {
-      options: prepareOptions({
-        headers: { 'If-Match': '3-871801934' },
-        uri: 'http://json13.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          headers: { 'If-Match': '3-871801934' },
+          uri: 'http://json13.test/entries/ent1',
+        },
+        serviceId
+      ),
       auth: { Authorization: 'The_token' },
     },
   }
@@ -589,9 +662,12 @@ test('should retrieve with auth headers', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data: '{}' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json14.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json14.test/entries/ent1',
+        },
+        serviceId
+      ),
       auth: { Authorization: 'The_token' },
     },
   }
@@ -626,10 +702,13 @@ test('should retrieve with headers from action', async (t) => {
       },
     },
     meta: {
-      options: prepareOptions({
-        headers: { 'If-Match': '3-871801934' },
-        uri: 'http://json15.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          headers: { 'If-Match': '3-871801934' },
+          uri: 'http://json15.test/entries/ent1',
+        },
+        serviceId
+      ),
       auth: { Authorization: 'The_token' },
     },
   }
@@ -657,9 +736,12 @@ test('should remove content-type header in GET requests', async (t) => {
       },
     },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json24.test/entries/ent1',
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json24.test/entries/ent1',
+        },
+        serviceId
+      ),
       auth: null,
     },
   }
@@ -682,11 +764,14 @@ test('should retrieve with auth params in querystring', async (t) => {
     type: 'SET',
     payload: { type: 'entry', data: '{}' },
     meta: {
-      options: prepareOptions({
-        uri: 'http://json16.test/entries/ent1',
-        authAsQuery: true,
-        queryParams: { order: 'desc' },
-      }),
+      options: prepareOptions(
+        {
+          uri: 'http://json16.test/entries/ent1',
+          authAsQuery: true,
+          queryParams: { order: 'desc' },
+        },
+        serviceId
+      ),
       auth: { Authorization: 'Th@&t0k3n', timestamp: '1554407539' },
     },
   }
@@ -713,7 +798,7 @@ test('should return error when no uri', async (t) => {
     type: 'GET',
     payload: { type: 'entry' },
     meta: {
-      options: prepareOptions({ uri: undefined }),
+      options: prepareOptions({ uri: undefined }, serviceId),
     },
   }
 

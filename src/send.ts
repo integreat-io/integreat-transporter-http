@@ -2,13 +2,8 @@ import debugFn from 'debug'
 import got, { HTTPError, Response as GotResponse, Options } from 'got'
 import queryString from 'query-string'
 import { isDate } from './utils/is.js'
-import {
-  Action,
-  Response,
-  Headers,
-  EndpointOptions,
-  Connection,
-} from './types.js'
+import type { Action, Response, Headers } from 'integreat'
+import { EndpointOptions, Connection } from './types.js'
 
 type URLSearchArray = readonly [string, string][]
 type KeyVal = [string, string]
@@ -191,7 +186,7 @@ function optionsFromEndpoint({
 }: Action) {
   const method = selectMethod(options, payload.data)
   return {
-    prefixUrl: options?.baseUri || '',
+    prefixUrl: typeof options?.baseUri === 'string' ? options.baseUri : '',
     url: generateUrl(options),
     searchParams: generateQueryParams(options, auth),
     method,
@@ -221,7 +216,7 @@ export default async function send(
   _connection: Connection | null
 ): Promise<Response> {
   const { url, ...options } = optionsFromEndpoint(action)
-  const { responseFormat = 'string' } = action.meta?.options || {}
+  const { responseFormat } = action.meta?.options || {}
 
   if (!url) {
     return createResponse(
@@ -244,7 +239,10 @@ export default async function send(
       ? createResponse(
           action,
           'ok',
-          extractResponseData(gotResponse, responseFormat),
+          extractResponseData(
+            gotResponse,
+            typeof responseFormat === 'string' ? responseFormat : 'string'
+          ),
           undefined,
           gotResponse.headers
         )

@@ -3,6 +3,11 @@ import test from 'ava'
 
 import transporter from './index.js'
 
+// Setup
+
+const emit = () => undefined
+const serviceId = 'http'
+
 // Tests
 
 test('should be a transporter', (t) => {
@@ -21,7 +26,7 @@ test('should have authentication string', (t) => {
 test('connect should return connection object', async (t) => {
   const connection = { status: 'ok' }
 
-  const ret = await transporter.connect({}, {}, connection)
+  const ret = await transporter.connect({}, {}, connection, emit)
 
   t.deepEqual(ret, connection)
 })
@@ -44,7 +49,7 @@ test('should return options object', (t) => {
   }
   const expected = options
 
-  const ret = transporter.prepareOptions(options)
+  const ret = transporter.prepareOptions(options, serviceId)
 
   t.deepEqual(ret, expected)
 })
