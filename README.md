@@ -8,7 +8,7 @@ over http/https.
 
 ### Prerequisits
 
-Requires node v10 and Integreat v0.8.
+Requires node v18 and Integreat v0.8.
 
 ### Installing and using
 
@@ -21,14 +21,13 @@ npm install integreat-transport-http
 Example of use:
 
 ```javascript
-const integreat = require('integreat')
-const httpAdapter = require('integreat-transport-http')
-const defs = require('./config')
+import Integreat from 'integreat'
+import httpTransporter from 'integreat-transport-http'
+import defs from './config'
 
-const resources = integreat.mergeResources(integreat.resources(), {
-  transporters: { http: httpAdapter() },
+const great = Integreat.create(defs, {
+  transporters: { bull: httpTransporter() },
 })
-const great = integreat(defs, resources)
 
 // ... and then dispatch actions as usual
 ```
@@ -54,7 +53,8 @@ Available options for action meta options:
   Value will be forced to strings
 - `authAsQuery`: When set to `true`, auth object will be included as query
   params. Use with care
-- `headers`: An object of key/value pairs use directly as request headers
+- `headers`: An object of key/value pairs use directly as request headers. It
+  will be combined with the `headers` object on the `payload`.
 - `responseFormat`: Controls what format the body data is returned in. `base64`
   will encode the raw body buffer as base64, while `string` will simply return
   the body as a string. Default is `string`
