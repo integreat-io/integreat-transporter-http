@@ -1,5 +1,10 @@
 import debugFn from 'debug'
-import got, { HTTPError, Response as GotResponse, Options } from 'got'
+import got, {
+  HTTPError,
+  Response as GotResponse,
+  RequestError as GotRequestError,
+  Options,
+} from 'got'
 import queryString from 'query-string'
 import { isDate } from './utils/is.js'
 import type { Action, Response, Headers } from 'integreat'
@@ -14,6 +19,9 @@ const isGotResponse = (response: unknown): response is GotResponse =>
   !!response &&
   typeof response === 'object' &&
   typeof (response as GotResponse).statusCode === 'number'
+
+const isGetRequestError = (error: Error): error is GotRequestError =>
+  typeof (error as GotRequestError).code === 'string'
 
 function prepareLogUrl(url: string, query: URLSearchParams) {
   const searchIndex = url.indexOf('?')
@@ -36,6 +44,9 @@ const logResponse = (response: Response, { url, method }: Partial<Options>) => {
   debug('%s: %o', message, response)
 }
 
+const getStatusCodeFromError = (error: Error) =>
+  isGetRequestError(error) && error.code === 'ETIMEDOUT' ? 408 : undefined
+
 const extractFromError = (
   error: unknown
 ): [number | undefined, string | undefined, unknown] =>
@@ -44,7 +55,7 @@ const extractFromError = (
     : error instanceof HTTPError
     ? [error.response.statusCode, error.response.statusMessage, undefined]
     : error instanceof Error
-    ? [undefined, error.message, undefined] // TODO: Return error.message in debug mode only?
+    ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
     : [undefined, 'Unknown response', undefined]
 
 const createResponse = (
@@ -197,6 +208,9 @@ function optionsFromEndpoint({
     ),
     retry: { limit: 0 },
     throwHttpErrors: false,
+    timeout: {
+      response: typeof options?.timeout === 'number' ? options.timeout : 120000,
+    },
   }
 }
 

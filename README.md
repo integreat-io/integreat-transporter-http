@@ -29,7 +29,7 @@ import httpTransporter from 'integreat-transport-http'
 import defs from './config'
 
 const great = Integreat.create(defs, {
-  transporters: { bull: httpTransporter() },
+  transporters: { http: httpTransporter() },
 })
 
 // ... and then dispatch actions as usual
@@ -61,6 +61,7 @@ Available options for action meta options:
 - `responseFormat`: Controls what format the body data is returned in. `base64`
   will encode the raw body buffer as base64, while `string` will simply return
   the body as a string. Default is `string`
+- `timeout`: Timeout in milliseconds for the request. Default is 120000
 
 ### Running the tests
 

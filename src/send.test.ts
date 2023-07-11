@@ -650,6 +650,32 @@ test('should send with headers from endpoint', async (t) => {
   t.is(ret.status, 'ok', ret.error)
 })
 
+test('should support custom timeout in milliseconds', async (t) => {
+  nock('http://json27.test')
+    .put('/entries/ent1', '{}')
+    .delay(500) // Delay the response for 500ms
+    .reply(200, {})
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data: '{}' },
+    meta: {
+      auth: {},
+      options: prepareOptions(
+        {
+          uri: 'http://json27.test/entries/ent1',
+          timeout: 1, // Set a very low timeout for making sure it times out
+        },
+        serviceId
+      ),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  t.is(ret.status, 'timeout', ret.error)
+  t.is(typeof ret.error, 'string')
+})
+
 test('should retrieve with auth headers', async (t) => {
   nock('http://json14.test', {
     reqheaders: {

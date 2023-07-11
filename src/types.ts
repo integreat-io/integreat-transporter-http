@@ -16,6 +16,7 @@ export interface EndpointOptions extends Record<string, unknown> {
   headers?: Headers
   incoming?: IncomingOptions
   responseFormat?: string
+  timeout?: number
 }
 
 export interface ConnectionIncomingOptions {
