@@ -1,4 +1,5 @@
 import test from 'ava'
+import type { EndpointOptions } from 'integreat/dist/service/endpoints/types.js'
 
 import connect from './connect.js'
 
@@ -80,6 +81,31 @@ test('should set incoming options on connection', async (t) => {
       sourceService: 'mainApi',
     },
   }
+  const expectedIncoming = {
+    host: ['test2.api'],
+    path: ['/entries'],
+    port: 3000,
+    sourceService: 'mainApi',
+  }
+
+  const ret = await connect(options, null, null)
+
+  t.is(ret?.status, 'ok')
+  t.deepEqual(ret?.incoming, expectedIncoming)
+
+  ret?.server?.close()
+})
+
+test('should lower case incoming path and host, and remove empty ones', async (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+    incoming: {
+      host: ['TEST2.api', '', undefined],
+      path: [null, '/Entries'],
+      port: 3000,
+      sourceService: 'mainApi',
+    },
+  } as EndpointOptions
   const expectedIncoming = {
     host: ['test2.api'],
     path: ['/entries'],

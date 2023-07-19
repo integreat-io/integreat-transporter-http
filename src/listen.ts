@@ -119,9 +119,10 @@ async function actionFromRequest(
     payload: {
       ...(data && { data }),
       method: request.method,
-      hostname,
+      hostname:
+        typeof hostname === 'string' ? hostname.toLowerCase() : undefined,
       port: port || incomingPort,
-      path,
+      path: typeof path === 'string' ? path.toLowerCase() : undefined,
       queryParams,
       contentType: contentTypeFromRequest(request),
       headers: request.headers as Record<string, string>,
@@ -130,13 +131,16 @@ async function actionFromRequest(
   }
 }
 
-const setSourceService = (action: Action, sourceService?: string) => ({
-  ...action,
-  payload: {
-    ...action.payload,
-    sourceService,
-  },
-})
+const setSourceService = (action: Action, sourceService?: string) =>
+  typeof sourceService === 'string'
+    ? {
+        ...action,
+        payload: {
+          ...action.payload,
+          sourceService,
+        },
+      }
+    : action
 
 const createHandler = (
   ourServices: [Dispatch, ConnectionIncomingOptions][],

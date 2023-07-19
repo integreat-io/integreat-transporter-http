@@ -63,6 +63,20 @@ Available options for action meta options:
   the body as a string. Default is `string`
 - `timeout`: Timeout in milliseconds for the request. Default is 120000
 
+- `incoming`: An object with options to define an incoming service. The precense
+  of this object will start an http server, and the properties of the object
+  will define what requests this service will respond to. The following options
+  are available:
+  - `port`: The port to listen on. Default is 8080
+  - `host`: The host to listen on. This is case insensitive. Default is any host
+  - `path`: The path to listen on. This will match anything "below" the path you
+    specify, meaning `'/entries'` will match `'/entries/ent1'`. The match is
+    case insensitive. Default is any path
+  - `sourceService`: When this is a string, it will be set as `sourceService` on
+    the action being dispatched from the listener. Only use this if you want to
+    override the default behaviour of Integreat, that is to set the id of the
+    service as `sourceService`.
+
 ### Running the tests
 
 The tests can be run with `npm test`.

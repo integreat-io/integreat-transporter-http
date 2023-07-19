@@ -121,7 +121,6 @@ test('should dispatch POST request as SET action', async (t) => {
         host: 'localhost:9003',
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
-      sourceService: undefined,
     },
     meta: {},
   }
@@ -192,7 +191,6 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
         host: 'localhost:9025',
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
-      sourceService: undefined,
     },
     meta: {},
   }
@@ -205,6 +203,52 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
   t.deepEqual(dispatch.args[0][0], expectedAction)
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
+
+  connection.server.close()
+})
+
+test('should lowercase host and path in dispatched action', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { port: 9030, host: [], path: [] },
+  }
+  const url = 'http://LOCALHOST:9030/Entries?filter=all&format=json'
+  const options = { headers: { 'Content-Type': 'application/json' } }
+  const expectedAction = {
+    type: 'GET',
+    payload: {
+      method: 'GET',
+      hostname: 'localhost', // We can't really test this, as got will lowercase it for us
+      port: 9030,
+      path: '/entries',
+      queryParams: {
+        filter: 'all',
+        format: 'json',
+      },
+      contentType: 'application/json',
+      headers: {
+        'accept-encoding': 'gzip, deflate, br',
+        connection: 'close',
+        'content-type': 'application/json',
+        host: 'localhost:9030',
+        'user-agent': 'got (https://github.com/sindresorhus/got)',
+      },
+    },
+    meta: {},
+  }
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.deepEqual(dispatch.args[0][0], expectedAction)
+  t.is(response.statusCode, 200)
+  t.is(response.headers['content-type'], 'application/json')
+  t.is(response.body, responseData)
 
   connection.server.close()
 })
@@ -585,6 +629,25 @@ test('should return 404 when path pattern does not match', async (t) => {
   t.is(dispatch.callCount, 0)
   t.is(response.statusCode, 404)
   t.falsy(response.headers['content-type'])
+
+  connection.server.close()
+})
+
+test('should accept url with different casing than path pattern', async (t) => {
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: '[]' })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9029 },
+  }
+  const url = 'http://localhost:9029/Entries'
+
+  const ret = await listen(dispatch, connection)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 200)
 
   connection.server.close()
 })
