@@ -2,10 +2,11 @@ import test from 'ava'
 import sinon from 'sinon'
 import http from 'http'
 import got from 'got'
+import type { Action, Headers } from 'integreat'
+import type { IncomingMessage } from 'http'
 import type { Connection } from './types.js'
 
 import listen, { actionFromRequest } from './listen.js'
-import { IncomingMessage } from 'http'
 
 // Setup
 
@@ -19,6 +20,21 @@ const options = {
 const authenticate = async () => ({
   status: 'ok',
   access: { ident: { id: 'userFromIntegreat' } },
+})
+
+const stripIrrelevantHeaders = ({
+  connection,
+  ['accept-encoding']: _ae,
+  ['user-agent']: _ua,
+  ...headers
+}: Headers) => headers
+
+const stripIrrelevantHeadersFromAction = (action: Action) => ({
+  ...action,
+  payload: {
+    ...action.payload,
+    headers: stripIrrelevantHeaders(action.payload.headers || {}),
+  },
 })
 
 // Tests
@@ -71,11 +87,8 @@ test('should dispatch GET request as GET action and respond with response', asyn
       },
       contentType: 'application/json',
       headers: {
-        'accept-encoding': 'gzip, deflate, br',
-        connection: 'close',
         'content-type': 'application/json',
         host: 'localhost:9002',
-        'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
     meta: {},
@@ -96,9 +109,15 @@ test('should dispatch GET request as GET action and respond with response', asyn
   t.deepEqual(ret, { status: 'ok' })
   t.is(authenticate.callCount, 1)
   t.deepEqual(authenticate.args[0][0], expectedAuthentication)
-  t.deepEqual(authenticate.args[0][1], expectedRawAction)
+  t.deepEqual(
+    stripIrrelevantHeadersFromAction(authenticate.args[0][1]),
+    expectedRawAction
+  )
   t.is(dispatch.callCount, 1)
-  t.deepEqual(dispatch.args[0][0], expectedAction)
+  t.deepEqual(
+    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
+    expectedAction
+  )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
   t.is(response.body, responseData)
@@ -131,15 +150,12 @@ test('should dispatch POST request as SET action', async (t) => {
       queryParams: {},
       contentType: 'application/json',
       headers: {
-        'accept-encoding': 'gzip, deflate, br',
-        connection: 'close',
         'content-type': 'application/json',
         'content-length': '15',
         host: 'localhost:9003',
-        'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
-    meta: { ident: { id: 'userFromIntegreat' } }
+    meta: { ident: { id: 'userFromIntegreat' } },
   }
 
   const ret = await listen(dispatch, connection, authenticate)
@@ -147,7 +163,10 @@ test('should dispatch POST request as SET action', async (t) => {
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 1)
-  t.deepEqual(dispatch.args[0][0], expectedAction)
+  t.deepEqual(
+    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
+    expectedAction
+  )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
   t.is(response.body, '')
@@ -203,10 +222,7 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
       queryParams: {},
       contentType: undefined,
       headers: {
-        'accept-encoding': 'gzip, deflate, br',
-        connection: 'close',
         host: 'localhost:9025',
-        'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
     meta: { ident: { id: 'userFromIntegreat' } },
@@ -217,7 +233,10 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 1)
-  t.deepEqual(dispatch.args[0][0], expectedAction)
+  t.deepEqual(
+    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
+    expectedAction
+  )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
 
@@ -249,11 +268,8 @@ test('should lowercase host and path in dispatched action', async (t) => {
       },
       contentType: 'application/json',
       headers: {
-        'accept-encoding': 'gzip, deflate, br',
-        connection: 'close',
         'content-type': 'application/json',
         host: 'localhost:9030',
-        'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
     meta: { ident: { id: 'userFromIntegreat' } },
@@ -264,7 +280,10 @@ test('should lowercase host and path in dispatched action', async (t) => {
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 1)
-  t.deepEqual(dispatch.args[0][0], expectedAction)
+  t.deepEqual(
+    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
+    expectedAction
+  )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
   t.is(response.body, responseData)
