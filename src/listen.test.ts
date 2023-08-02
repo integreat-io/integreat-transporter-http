@@ -16,9 +16,14 @@ const options = {
   retry: { limit: 0 },
 }
 
+const authenticate = async () => ({
+  status: 'ok',
+  access: { ident: { id: 'userFromIntegreat' } },
+})
+
 // Tests
 
-test('should return ok when on await listen', async (t) => {
+test('should return ok on listen', async (t) => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
@@ -28,7 +33,7 @@ test('should return ok when on await listen', async (t) => {
     incoming: { host: ['localhost'], path: ['/entries'], port: 9001 },
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 0) // No dispatching without requests
@@ -39,6 +44,9 @@ test('should return ok when on await listen', async (t) => {
 test('should dispatch GET request as GET action and respond with response', async (t) => {
   const responseData = JSON.stringify([{ id: 'ent1' }])
   const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon
+    .stub()
+    .resolves({ status: 'ok', access: { ident: { id: 'userFromIntegreat' } } })
   const connection = {
     status: 'ok',
     server: http.createServer(),
@@ -50,10 +58,7 @@ test('should dispatch GET request as GET action and respond with response', asyn
     },
   }
   const url = 'http://localhost:9002/entries?filter=all&format=json'
-  const options = {
-    headers: { 'Content-Type': 'application/json' },
-  }
-  const expectedAction = {
+  const expectedRawAction = {
     type: 'GET',
     payload: {
       method: 'GET',
@@ -72,15 +77,26 @@ test('should dispatch GET request as GET action and respond with response', asyn
         host: 'localhost:9002',
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
-      sourceService: 'mainApi',
     },
     meta: {},
   }
+  const expectedAction = {
+    ...expectedRawAction,
+    payload: {
+      ...expectedRawAction.payload,
+      sourceService: 'mainApi',
+    },
+    meta: { ident: { id: 'userFromIntegreat' } },
+  }
+  const expectedAuthentication = { status: 'granted' }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
+  t.is(authenticate.callCount, 1)
+  t.deepEqual(authenticate.args[0][0], expectedAuthentication)
+  t.deepEqual(authenticate.args[0][1], expectedRawAction)
   t.is(dispatch.callCount, 1)
   t.deepEqual(dispatch.args[0][0], expectedAction)
   t.is(response.statusCode, 200)
@@ -123,10 +139,10 @@ test('should dispatch POST request as SET action', async (t) => {
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
-    meta: {},
+    meta: { ident: { id: 'userFromIntegreat' } }
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -154,7 +170,7 @@ test('should dispatch PUT request as SET action', async (t) => {
     body: requestData,
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -193,10 +209,10 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
-    meta: {},
+    meta: { ident: { id: 'userFromIntegreat' } },
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -240,10 +256,10 @@ test('should lowercase host and path in dispatched action', async (t) => {
         'user-agent': 'got (https://github.com/sindresorhus/got)',
       },
     },
-    meta: {},
+    meta: { ident: { id: 'userFromIntegreat' } },
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -333,7 +349,7 @@ test('should dispatch other content-type', async (t) => {
     body: requestData,
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -370,7 +386,7 @@ test('should stringify response data', async (t) => {
   }
   const url = 'http://localhost:9006/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -399,7 +415,7 @@ test('should respond with response headers', async (t) => {
     headers: { 'Content-Type': 'application/json' },
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -428,7 +444,7 @@ test('should skip response headers with value undefined', async (t) => {
   const url = 'http://localhost:9028/entries'
   const options = { retry: { limit: 0 }, throwHttpErrors: false }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -454,7 +470,7 @@ test('should use content type from response headers', async (t) => {
   const url = 'http://localhost:9027/entries?filter=all&format=json'
   const options = {}
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -478,7 +494,7 @@ test('should respond with 201 on queued', async (t) => {
   }
   const url = 'http://localhost:9012/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -501,7 +517,7 @@ test('should respond with 500 on error', async (t) => {
   }
   const url = 'http://localhost:9007/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -525,7 +541,7 @@ test('should respond with 400 on badrequest', async (t) => {
   }
   const url = 'http://localhost:9008/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -547,7 +563,7 @@ test('should respond with 401 on noaccess', async (t) => {
   }
   const url = 'http://localhost:9024/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -569,11 +585,40 @@ test('should respond with 403 on noaccess', async (t) => {
   }
   const url = 'http://localhost:9009/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 403)
+
+  connection.server.close()
+})
+
+test('should respond with 403 when authentication with Integreat fails', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon
+    .stub()
+    .resolves({ status: 'noaccess', error: 'Not set up right' })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9031,
+      sourceService: 'mainApi',
+    },
+  }
+  const url = 'http://localhost:9031/entries?filter=all&format=json'
+
+  const ret = await listen(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(authenticate.callCount, 1)
+  t.is(dispatch.callCount, 0)
   t.is(response.statusCode, 403)
 
   connection.server.close()
@@ -591,7 +636,7 @@ test('should respond with 404 on notfound', async (t) => {
   }
   const url = 'http://localhost:9010/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -613,7 +658,7 @@ test('should respond with 404 on noaction', async (t) => {
   }
   const url = 'http://localhost:9013/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -635,7 +680,7 @@ test('should respond with 408 on timeout', async (t) => {
   }
   const url = 'http://localhost:9011/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -649,7 +694,7 @@ test('should return with status badrequest when no connection', async (t) => {
   const dispatch = sinon.stub().resolves({ status: 'ok', data: [] })
   const connection = null
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
 
   t.deepEqual(ret, {
     status: 'badrequest',
@@ -666,7 +711,7 @@ test('should return 404 when path pattern does not match', async (t) => {
   }
   const url = 'http://localhost:9014/unknown'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -686,7 +731,7 @@ test('should accept url with different casing than path pattern', async (t) => {
   }
   const url = 'http://localhost:9029/Entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -709,7 +754,7 @@ test('should return 404 when host pattern does not match', async (t) => {
   }
   const url = 'http://localhost:9015/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -733,7 +778,7 @@ test('should dispatch when path pattern is root', async (t) => {
   }
   const url = 'http://localhost:9016/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -756,7 +801,7 @@ test('should dispatch when no path pattern', async (t) => {
   }
   const url = 'http://localhost:9017/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -779,7 +824,7 @@ test('should dispatch when no host pattern', async (t) => {
   }
   const url = 'http://localhost:9018/entries'
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
@@ -807,8 +852,8 @@ test('should dispatch to matching service', async (t) => {
   }
   const url = 'http://localhost:9019/accounts'
 
-  const ret0 = await listen(dispatch0, connection0)
-  const ret1 = await listen(dispatch1, connection1)
+  const ret0 = await listen(dispatch0, connection0, authenticate)
+  const ret1 = await listen(dispatch1, connection1, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret0, { status: 'ok' })
@@ -841,8 +886,8 @@ test('should keep port setups seperate', async (t) => {
   }
   const url = 'http://localhost:9021/entries'
 
-  const ret0 = await listen(dispatch0, connection0)
-  const ret1 = await listen(dispatch1, connection1)
+  const ret0 = await listen(dispatch0, connection0, authenticate)
+  const ret1 = await listen(dispatch1, connection1, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret0, { status: 'ok' })
@@ -870,7 +915,7 @@ test('should return error from server.listen()', async (t) => {
     .stub(connection.server, 'listen')
     .throws(new Error('Something went terribly wrong'))
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
 
   t.deepEqual(ret, {
     status: 'error',
@@ -894,7 +939,7 @@ test('should return error when server fails', async (t) => {
   const otherServer = http.createServer()
 
   otherServer.listen(9023)
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
 
   t.deepEqual(ret, {
     status: 'error',
@@ -915,7 +960,7 @@ test('should return with status badrequest when incomming has no port', async (t
     incoming: { host: ['localhost'], path: ['/entries'] }, // No `port`
   }
 
-  const ret = await listen(dispatch, connection as Connection)
+  const ret = await listen(dispatch, connection as Connection, authenticate)
 
   t.deepEqual(ret, {
     status: 'badrequest',
@@ -933,7 +978,7 @@ test('should return with status badrequest when connection has no server', async
     incoming: { host: ['localhost'], path: ['/entries'], port: 9000 },
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
 
   t.deepEqual(ret, {
     status: 'badrequest',
@@ -949,7 +994,7 @@ test('should return with status noaction when connection has no incomming', asyn
     incoming: undefined,
   }
 
-  const ret = await listen(dispatch, connection)
+  const ret = await listen(dispatch, connection, authenticate)
 
   t.deepEqual(ret, {
     status: 'noaction',

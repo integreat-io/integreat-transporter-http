@@ -1,5 +1,5 @@
 import test from 'ava'
-import type { EndpointOptions } from 'integreat/dist/service/endpoints/types.js'
+import type { ServiceOptions } from 'integreat'
 
 import connect from './connect.js'
 
@@ -105,7 +105,7 @@ test('should lower case incoming path and host, and remove empty ones', async (t
       port: 3000,
       sourceService: 'mainApi',
     },
-  } as EndpointOptions
+  } as ServiceOptions
   const expectedIncoming = {
     host: ['test2.api'],
     path: ['/entries'],

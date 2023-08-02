@@ -1,12 +1,12 @@
 import debugFn from 'debug'
 import http from 'http'
-import type { Dispatch, Response, Action } from 'integreat'
+import type { Dispatch, Action, Response, Ident, AuthenticateExternal } from 'integreat'
 import type { Connection, ConnectionIncomingOptions } from './types.js'
 
 const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')
 
-const services: Record<number, [Dispatch, ConnectionIncomingOptions][]> = {}
+const services: Record<number, [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][]> = {}
 
 const matchesHostname = (hostname: unknown, patterns: string[]) =>
   patterns.length === 0 ||
@@ -32,7 +32,7 @@ const actionMatchesOptions = (
 
 const actionTypeFromRequest = (request: http.IncomingMessage) =>
   typeof request.method !== 'string' ||
-  ['GET', 'OPTIONS'].includes(request.method)
+    ['GET', 'OPTIONS'].includes(request.method)
     ? 'GET'
     : 'SET'
 
@@ -50,18 +50,18 @@ const normalizeHeaders = (
 ) =>
   headers
     ? Object.fromEntries(
-        Object.entries(headers)
-          .filter(([, value]) => value !== undefined)
-          .map(([key, value]) => [key.toLowerCase(), value])
-      )
+      Object.entries(headers)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) => [key.toLowerCase(), value])
+    )
     : undefined
 
 const dataFromResponse = (response: Response) =>
   typeof response.data === 'string'
     ? response.data
     : response.data === null || response.data === undefined
-    ? undefined
-    : JSON.stringify(response.data)
+      ? undefined
+      : JSON.stringify(response.data)
 
 function statusCodeFromResponse(response: Response) {
   switch (response.status) {
@@ -131,19 +131,21 @@ export async function actionFromRequest(
   }
 }
 
-const setSourceService = (action: Action, sourceService?: string) =>
+const setIdentAndSourceService = (action: Action, ident: Ident, sourceService?: string) =>
   typeof sourceService === 'string'
     ? {
-        ...action,
-        payload: {
-          ...action.payload,
-          sourceService,
-        },
-      }
-    : action
+      ...action,
+      payload: {
+        ...action.payload,
+        sourceService,
+      },
+      meta: { ...action.meta, ident }
+    }
+    : { ...action, meta: { ...action.meta, ident } }
+
 
 const createHandler = (
-  ourServices: [Dispatch, ConnectionIncomingOptions][],
+  ourServices: [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][],
   incomingPort: number
 ) =>
   async function handleIncoming(
@@ -156,14 +158,22 @@ const createHandler = (
     )
     debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
 
-    const [dispatch, options] =
-      ourServices.find(([, options]) =>
+    const [options, dispatch, authenticate] =
+      ourServices.find(([options]) =>
         actionMatchesOptions(action, options)
       ) || []
 
-    if (dispatch) {
+    if (dispatch && authenticate) {
+      const authResponse = await authenticate({ status: 'granted' }, action)
+      const ident = authResponse.access?.ident
+      if (authResponse.status !== 'ok' || !ident) {
+        res.writeHead(403)
+        res.end()
+        return
+      }
+
       const sourceService = options?.sourceService
-      const response = await dispatch(setSourceService(action, sourceService))
+      const response = await dispatch(setIdentAndSourceService(action, ident, sourceService))
 
       const responseDate = dataFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
@@ -188,7 +198,8 @@ const createHandler = (
 
 export default async function listen(
   dispatch: Dispatch,
-  connection: Connection | null
+  connection: Connection | null,
+  authenticate: AuthenticateExternal
 ): Promise<Response> {
   debug('Start listening ...')
 
@@ -236,7 +247,7 @@ export default async function listen(
   }
 
   // Add service settings to list
-  ourServices.push([dispatch, incoming])
+  ourServices.push([incoming, dispatch, authenticate])
 
   // Start listening on port if we're not already listening
   if (!server.listening) {
