@@ -1,12 +1,28 @@
 import debugFn from 'debug'
-import http from 'http'
-import type { Dispatch, Action, Response, Ident, AuthenticateExternal } from 'integreat'
+import { actionFromRequest } from './utils/request.js'
+import {
+  dataFromResponse,
+  statusCodeFromResponse,
+  normalizeHeaders,
+} from './utils/response.js'
+import type http from 'http'
+import type {
+  Dispatch,
+  Action,
+  Response,
+  Headers,
+  Ident,
+  AuthenticateExternal,
+} from 'integreat'
 import type { Connection, ConnectionIncomingOptions } from './types.js'
 
 const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')
 
-const services: Record<number, [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][]> = {}
+const services = new Map<
+  number,
+  [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][]
+>()
 
 const matchesHostname = (hostname: unknown, patterns: string[]) =>
   patterns.length === 0 ||
@@ -30,108 +46,11 @@ const actionMatchesOptions = (
   matchesHostname(action.payload.hostname, options.host) &&
   matchesPath(action.payload.path, options.path)
 
-const actionTypeFromRequest = (request: http.IncomingMessage) =>
-  typeof request.method !== 'string' ||
-    ['GET', 'OPTIONS'].includes(request.method)
-    ? 'GET'
-    : 'SET'
-
-function contentTypeFromRequest(request: http.IncomingMessage) {
-  const header = request.headers['content-type']
-  if (typeof header === 'string') {
-    return header.split(';')[0]
-  }
-
-  return undefined
-}
-
-const normalizeHeaders = (
-  headers?: Record<string, string | string[] | undefined>
+const setIdentAndSourceService = (
+  action: Action,
+  ident: Ident,
+  sourceService?: string
 ) =>
-  headers
-    ? Object.fromEntries(
-      Object.entries(headers)
-        .filter(([, value]) => value !== undefined)
-        .map(([key, value]) => [key.toLowerCase(), value])
-    )
-    : undefined
-
-const dataFromResponse = (response: Response) =>
-  typeof response.data === 'string'
-    ? response.data
-    : response.data === null || response.data === undefined
-      ? undefined
-      : JSON.stringify(response.data)
-
-function statusCodeFromResponse(response: Response) {
-  switch (response.status) {
-    case 'ok':
-      return 200
-    case 'queued':
-      return 201
-    case 'badrequest':
-      return 400
-    case 'autherror':
-      return 401
-    case 'noaccess':
-      return 403
-    case 'notfound':
-    case 'noaction':
-      return 404
-    case 'timeout':
-      return 408
-    default:
-      return 500
-  }
-}
-
-async function readDataFromRequest(request: http.IncomingMessage) {
-  const buffers = []
-  for await (const chunk of request) {
-    buffers.push(chunk)
-  }
-  return Buffer.concat(buffers).toString()
-}
-
-function parseUrl(request: http.IncomingMessage) {
-  if (request.url && request.headers.host) {
-    const parts = new URL(request.url, `http://${request.headers.host}`)
-    return [
-      parts.hostname,
-      parts.port && Number.parseInt(parts.port, 10),
-      parts.pathname,
-      Object.fromEntries(parts.searchParams.entries()),
-    ] as const
-  }
-
-  return []
-}
-
-export async function actionFromRequest(
-  request: http.IncomingMessage,
-  incomingPort: number
-) {
-  const [hostname, port, path, queryParams] = parseUrl(request)
-  const data = await readDataFromRequest(request)
-
-  return {
-    type: actionTypeFromRequest(request),
-    payload: {
-      ...(data && { data }),
-      method: request.method,
-      hostname:
-        typeof hostname === 'string' ? hostname.toLowerCase() : undefined,
-      port: port || incomingPort,
-      path: typeof path === 'string' ? path.toLowerCase() : undefined,
-      queryParams,
-      contentType: contentTypeFromRequest(request),
-      headers: request.headers as Record<string, string>,
-    },
-    meta: {},
-  }
-}
-
-const setIdentAndSourceService = (action: Action, ident: Ident, sourceService?: string) =>
   typeof sourceService === 'string'
     ? {
       ...action,
@@ -139,10 +58,25 @@ const setIdentAndSourceService = (action: Action, ident: Ident, sourceService?: 
         ...action.payload,
         sourceService,
       },
-      meta: { ...action.meta, ident }
+      meta: { ...action.meta, ident },
     }
     : { ...action, meta: { ...action.meta, ident } }
 
+function respond(res: http.ServerResponse, statusCode: number, responseDate?: string, responseHeaders?: Headers) {
+  try {
+    res.writeHead(statusCode, {
+      'content-type': 'application/json',
+      ...normalizeHeaders(responseHeaders),
+    })
+    res.end(responseDate)
+  } catch (error) {
+    res.writeHead(500)
+    res.end(
+      JSON.stringify({ status: 'error', error: 'Internal server error' })
+    )
+  }
+
+}
 
 const createHandler = (
   ourServices: [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][],
@@ -159,9 +93,8 @@ const createHandler = (
     debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
 
     const [options, dispatch, authenticate] =
-      ourServices.find(([options]) =>
-        actionMatchesOptions(action, options)
-      ) || []
+      ourServices.find(([options]) => actionMatchesOptions(action, options)) ||
+      []
 
     if (dispatch && authenticate) {
       const authResponse = await authenticate({ status: 'granted' }, action)
@@ -173,28 +106,83 @@ const createHandler = (
       }
 
       const sourceService = options?.sourceService
-      const response = await dispatch(setIdentAndSourceService(action, ident, sourceService))
+      const response = await dispatch(
+        setIdentAndSourceService(action, ident, sourceService)
+      )
 
       const responseDate = dataFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
 
-      try {
-        res.writeHead(statusCode, {
-          'content-type': 'application/json',
-          ...normalizeHeaders(response.headers),
-        })
-        res.end(responseDate)
-      } catch (error) {
-        res.writeHead(500)
-        res.end(
-          JSON.stringify({ status: 'error', error: 'Internal server error' })
-        )
-      }
+      return respond(res, statusCode, responseDate, response.headers)
     } else {
       res.writeHead(404)
       res.end()
     }
   }
+
+function getErrorFromConnection(connection: Connection | null) {
+  if (!connection) {
+    return {
+      status: 'badrequest',
+      error: 'Cannot listen to server. No connection',
+    }
+  } else if (!connection.incoming) {
+    return {
+      status: 'noaction',
+      error: 'Service not configured for listening',
+    }
+  } else if (!connection.server) {
+    return {
+      status: 'badrequest',
+      error: 'Cannot listen to server. No server set on connection',
+    }
+  } else if (!connection.incoming.port) {
+    return {
+      status: 'badrequest',
+      error: 'Cannot listen to server. No port set on incoming options',
+    }
+  } else {
+    return {
+      status: 'error',
+      error: 'Cannot listen to server. Unknown error',
+    }
+  }
+}
+
+function waitOnError(server: http.Server, port: number) {
+  let error: Error | null = null
+
+  server.on('error', (e) => {
+    error = e
+  })
+
+  return (): Promise<Response> =>
+    new Promise((resolve, _reject) => {
+      setTimeout(() => {
+        if (error) {
+          debug(
+            `Server on port ${port} gave an error after it was started: ${error}`
+          )
+          resolve({
+            status: 'error',
+            error: `Cannot listen to server on port ${port}. ${error}`,
+          })
+        } else {
+          debug(`No error from server on port ${port} after 200 ms`)
+          resolve({ status: 'ok' })
+        }
+      }, 200)
+    })
+}
+
+function getOurServices(port: number) {
+  let ourServices = services.get(port)
+  if (!ourServices) {
+    ourServices = []
+    services.set(port, ourServices)
+  }
+  return ourServices
+}
 
 export default async function listen(
   dispatch: Dispatch,
@@ -202,45 +190,16 @@ export default async function listen(
   authenticate: AuthenticateExternal
 ): Promise<Response> {
   debug('Start listening ...')
+  const { incoming, server } = connection || {}
 
-  if (!connection) {
-    debug('Cannot listen to server. No connection')
-    return {
-      status: 'badrequest',
-      error: 'Cannot listen to server. No connection',
-    }
-  }
-
-  const { incoming, server } = connection
-
-  if (!incoming) {
-    debug('Service not configured for listening')
-    return {
-      status: 'noaction',
-      error: 'Service not configured for listening',
-    }
-  }
-  if (!server) {
-    debug('Cannot listen to server. No server set on connection')
-    return {
-      status: 'badrequest',
-      error: 'Cannot listen to server. No server set on connection',
-    }
-  }
-  if (!incoming.port) {
-    debug('Cannot listen to server. No port set on incoming options')
-    return {
-      status: 'badrequest',
-      error: 'Cannot listen to server. No port set on incoming options',
-    }
-  }
-
-  let ourServices = services[incoming.port]
-  if (!ourServices) {
-    services[incoming.port] = ourServices = []
+  if (!incoming?.port || !server) {
+    const errorResponse = getErrorFromConnection(connection)
+    debug(errorResponse.error)
+    return errorResponse
   }
 
   // Set up listener if this is the first service to listen on this port
+  const ourServices = getOurServices(incoming.port)
   if (ourServices.length === 0) {
     debug(`Set up request handler for first service on port ${incoming.port}`)
     server.on('request', createHandler(ourServices, incoming.port))
@@ -252,11 +211,7 @@ export default async function listen(
   // Start listening on port if we're not already listening
   if (!server.listening) {
     debug(`Start listening to first service on port ${incoming.port}`)
-    let error: Error | null = null
-
-    server.on('error', (e) => {
-      error = e
-    })
+    const wait = waitOnError(server, incoming.port)
 
     // Start listening
     try {
@@ -270,23 +225,8 @@ export default async function listen(
       }
     }
 
-    // The server has been started but give it a few ms to make sure it doesn't throw
-    return new Promise((resolve, _reject) => {
-      setTimeout(() => {
-        if (error) {
-          debug(
-            `Server on port ${incoming.port} gave an error after it was started: ${error}`
-          )
-          resolve({
-            status: 'error',
-            error: `Cannot listen to server on port ${incoming.port}. ${error}`,
-          })
-        } else {
-          debug(`No error from server on port ${incoming.port} after 200 ms`)
-          resolve({ status: 'ok' })
-        }
-      }, 200)
-    })
+    // The server has been started but give it a few ms to make sure it doesn't throw right away
+    return await wait()
   }
 
   return { status: 'ok' }

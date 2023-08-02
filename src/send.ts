@@ -1,11 +1,10 @@
 import debugFn from 'debug'
 import got, {
-  HTTPError,
   Response as GotResponse,
-  RequestError as GotRequestError,
   Options as GotOptions,
 } from 'got'
 import queryString from 'query-string'
+import { createResponse, createResponseWithError } from './utils/response.js'
 import { isDate } from './utils/is.js'
 import type { Action, Response, Headers } from 'integreat'
 import { ServiceOptions, Connection } from './types.js'
@@ -14,14 +13,6 @@ type URLSearchArray = readonly [string, string][]
 type KeyVal = [string, string]
 
 const debug = debugFn('integreat:transporter:http')
-
-const isGotResponse = (response: unknown): response is GotResponse =>
-  !!response &&
-  typeof response === 'object' &&
-  typeof (response as GotResponse).statusCode === 'number'
-
-const isGetRequestError = (error: Error): error is GotRequestError =>
-  typeof (error as GotRequestError).code === 'string'
 
 function prepareLogUrl(url: string, query: URLSearchParams) {
   const searchIndex = url.indexOf('?')
@@ -47,67 +38,6 @@ const logResponse = (
   debug('%s: %o', message, response)
 }
 
-const getStatusCodeFromError = (error: Error) =>
-  isGetRequestError(error) && error.code === 'ETIMEDOUT' ? 408 : undefined
-
-const extractFromError = (
-  error: unknown
-): [number | undefined, string | undefined, unknown] =>
-  isGotResponse(error)
-    ? [error.statusCode, error.statusMessage, error.body]
-    : error instanceof HTTPError
-      ? [error.response.statusCode, error.response.statusMessage, undefined]
-      : error instanceof Error
-        ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
-        : [undefined, 'Unknown response', undefined]
-
-const createResponse = (
-  action: Action,
-  status: string,
-  data: unknown,
-  error?: string,
-  headers?: Headers
-): Response => ({
-  ...action.response,
-  status,
-  ...(data !== undefined && data !== '' ? { data } : {}),
-  ...(error !== undefined ? { error } : {}),
-  ...(headers ? { headers } : {}),
-})
-
-function createResponseWithError(action: Action, url: string, err: unknown) {
-  const [statusCode, statusMessage, data] = extractFromError(err)
-
-  const response = {
-    status: 'error',
-    error: `Server returned ${statusCode} for ${url}`,
-  }
-
-  if (statusCode === undefined) {
-    response.error = `Server returned '${statusMessage}' for ${url}`
-  } else {
-    switch (statusCode) {
-      case 400:
-        response.status = 'badrequest'
-        break
-      case 401:
-      case 403:
-        response.status = 'noaccess'
-        response.error = action.meta?.auth
-          ? `Not authorized (${statusCode})`
-          : `Service requires authentication (${statusCode})`
-        break
-      case 404:
-        response.status = 'notfound'
-        response.error = `Could not find the url ${url}`
-        break
-      case 408:
-        response.status = 'timeout'
-    }
-  }
-
-  return createResponse(action, response.status, data, response.error)
-}
 
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
   doRemove && typeof uri === 'string' && uri.startsWith('/')
@@ -228,12 +158,31 @@ function extractResponseData(response: GotResponse, format: string) {
   }
 }
 
+function responseFormatFromAction(action: Action) {
+  const format = action.meta?.options?.responseFormat
+  return typeof format === 'string' ? format : 'string'
+}
+
+const responseFromGotResponse = (
+  gotResponse: GotResponse,
+  url: string,
+  action: Action
+) =>
+  isOkResponse(gotResponse)
+    ? createResponse(
+      action,
+      'ok',
+      extractResponseData(gotResponse, responseFormatFromAction(action)),
+      undefined,
+      gotResponse.headers
+    )
+    : createResponseWithError(action, url, gotResponse)
+
 export default async function send(
   action: Action,
   _connection: Connection | null
 ): Promise<Response> {
   const { url, ...options } = optionsFromEndpoint(action)
-  const { responseFormat } = action.meta?.options || {}
 
   if (!url) {
     return createResponse(
@@ -252,18 +201,7 @@ export default async function send(
   try {
     logRequest(logOptions)
     const gotResponse = await got<string>(url, options)
-    const response = isOkResponse(gotResponse)
-      ? createResponse(
-        action,
-        'ok',
-        extractResponseData(
-          gotResponse,
-          typeof responseFormat === 'string' ? responseFormat : 'string'
-        ),
-        undefined,
-        gotResponse.headers
-      )
-      : createResponseWithError(action, url, gotResponse)
+    const response = responseFromGotResponse(gotResponse, url, action)
     logResponse(response, logOptions)
     return response
   } catch (error) {
