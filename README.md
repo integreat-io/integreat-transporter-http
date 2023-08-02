@@ -77,6 +77,15 @@ Available options for action meta options:
     override the default behaviour of Integreat, that is to set the id of the
     service as `sourceService`.
 
+**A note on headers:** Actions may have an `headers` object on the payload and
+the `meta.options` object. If they are both there, they will be merged, with the
+`payload.headers` object taking precedence. Also, if there's no `Content-Type`
+header in the action, and this is not a `GET` request, it will be set based on
+the `payload.data`. If it is a string, the content type will be `'text/plain'`,
+otherwise it will be `'application/json'`. Finally, the authenticator set for
+the service may have provided an object of headers, which will override
+everything else.
+
 ### Running the tests
 
 The tests can be run with `npm test`.
