@@ -8,7 +8,7 @@ export interface IncomingOptions {
   sourceService?: string
 }
 
-export interface EndpointOptions extends Record<string, unknown> {
+export interface ServiceOptions extends Record<string, unknown> {
   baseUri?: string
   uri?: string
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'

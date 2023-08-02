@@ -3,12 +3,12 @@ import got, {
   HTTPError,
   Response as GotResponse,
   RequestError as GotRequestError,
-  Options,
+  Options as GotOptions,
 } from 'got'
 import queryString from 'query-string'
 import { isDate } from './utils/is.js'
 import type { Action, Response, Headers } from 'integreat'
-import { EndpointOptions, Connection } from './types.js'
+import { ServiceOptions, Connection } from './types.js'
 
 type URLSearchArray = readonly [string, string][]
 type KeyVal = [string, string]
@@ -30,12 +30,15 @@ function prepareLogUrl(url: string, query: URLSearchParams) {
   return querystring ? `${bareUrl}?${querystring}` : bareUrl
 }
 
-const logRequest = (request: Partial<Options>) => {
+const logRequest = (request: Partial<GotOptions>) => {
   const message = `Sending ${request.method} ${request.url}`
   debug('%s: %o %s', message, request.headers, request.body)
 }
 
-const logResponse = (response: Response, { url, method }: Partial<Options>) => {
+const logResponse = (
+  response: Response,
+  { url, method }: Partial<GotOptions>
+) => {
   const { status, error } = response
   const message =
     status === 'ok'
@@ -53,10 +56,10 @@ const extractFromError = (
   isGotResponse(error)
     ? [error.statusCode, error.statusMessage, error.body]
     : error instanceof HTTPError
-    ? [error.response.statusCode, error.response.statusMessage, undefined]
-    : error instanceof Error
-    ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
-    : [undefined, 'Unknown response', undefined]
+      ? [error.response.statusCode, error.response.statusMessage, undefined]
+      : error instanceof Error
+        ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
+        : [undefined, 'Unknown response', undefined]
 
 const createResponse = (
   action: Action,
@@ -111,7 +114,7 @@ const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
     ? uri.slice(1)
     : uri
 
-const generateUrl = ({ uri, baseUri }: EndpointOptions = {}) =>
+const generateUrl = ({ uri, baseUri }: ServiceOptions = {}) =>
   removeLeadingSlashIf(uri, !!baseUri)
 
 function extractQueryParamsFromUri(uri?: string) {
@@ -128,10 +131,10 @@ const prepareQueryValue = (value: unknown): string =>
   isDate(value)
     ? value.toISOString()
     : value === null
-    ? ''
-    : ['string', 'number', 'boolean'].includes(typeof value)
-    ? String(value)
-    : JSON.stringify(value)
+      ? ''
+      : ['string', 'number', 'boolean'].includes(typeof value)
+        ? String(value)
+        : JSON.stringify(value)
 
 const prepareQueryParams = (params: Record<string, unknown>) =>
   new URLSearchParams(
@@ -141,16 +144,16 @@ const prepareQueryParams = (params: Record<string, unknown>) =>
         (params, [key, value]) =>
           Array.isArray(value)
             ? [
-                ...params,
-                ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
-              ]
+              ...params,
+              ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
+            ]
             : [...params, [key, prepareQueryValue(value)] as KeyVal],
         [] as KeyVal[]
       ) as URLSearchArray
   )
 
 const generateQueryParams = (
-  { queryParams, authAsQuery, uri }: EndpointOptions = {},
+  { queryParams, authAsQuery, uri }: ServiceOptions = {},
   auth?: Record<string, unknown> | boolean | null
 ) =>
   prepareQueryParams({
@@ -162,16 +165,16 @@ const generateQueryParams = (
 const removeContentTypeIf = (headers: Headers, doRemove: boolean) =>
   doRemove
     ? Object.entries(headers).reduce(
-        (headers, [key, value]) =>
-          key.toLowerCase() === 'content-type'
-            ? headers
-            : { ...headers, [key]: value },
-        {}
-      )
+      (headers, [key, value]) =>
+        key.toLowerCase() === 'content-type'
+          ? headers
+          : { ...headers, [key]: value },
+      {}
+    )
     : headers
 
 const createHeaders = (
-  options?: EndpointOptions,
+  options?: ServiceOptions,
   data?: unknown,
   headers?: Headers,
   auth?: Record<string, unknown> | boolean | null
@@ -185,7 +188,7 @@ const createHeaders = (
   ...(auth === true || options?.authAsQuery ? {} : auth),
 })
 
-const selectMethod = (options?: EndpointOptions, data?: unknown) =>
+const selectMethod = (options?: ServiceOptions, data?: unknown) =>
   options?.method || (data ? ('PUT' as const) : ('GET' as const))
 
 const prepareBody = (data: unknown) =>
@@ -251,15 +254,15 @@ export default async function send(
     const gotResponse = await got<string>(url, options)
     const response = isOkResponse(gotResponse)
       ? createResponse(
-          action,
-          'ok',
-          extractResponseData(
-            gotResponse,
-            typeof responseFormat === 'string' ? responseFormat : 'string'
-          ),
-          undefined,
-          gotResponse.headers
-        )
+        action,
+        'ok',
+        extractResponseData(
+          gotResponse,
+          typeof responseFormat === 'string' ? responseFormat : 'string'
+        ),
+        undefined,
+        gotResponse.headers
+      )
       : createResponseWithError(action, url, gotResponse)
     logResponse(response, logOptions)
     return response

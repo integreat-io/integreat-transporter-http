@@ -1,5 +1,5 @@
 import test from 'ava'
-import type { ServiceOptions } from 'integreat'
+import type { ServiceOptions } from './types.js'
 
 import connect from './connect.js'
 

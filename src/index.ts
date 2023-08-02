@@ -3,7 +3,7 @@ import send from './send.js'
 import listen from './listen.js'
 import disconnect from './disconnect.js'
 import type { Transporter } from 'integreat'
-import type { EndpointOptions } from './types.js'
+import type { ServiceOptions } from './types.js'
 
 /**
  * HTTP Transporter for Integreat
@@ -11,13 +11,13 @@ import type { EndpointOptions } from './types.js'
 const httpTransporter: Transporter = {
   authentication: 'asHttpHeaders',
 
-  prepareOptions: (options: EndpointOptions) => options,
+  prepareOptions: (options: ServiceOptions) => options,
 
   connect,
 
   send,
 
-  shouldListen: (options: EndpointOptions) => !!options.incoming,
+  shouldListen: (options: ServiceOptions) => !!options.incoming,
 
   listen,
 

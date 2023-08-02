@@ -1,7 +1,7 @@
 import http from 'http'
 import { ensureArray } from './utils/array.js'
 import { isNonEmptyString } from './utils/is.js'
-import type { Connection, EndpointOptions, IncomingOptions } from './types.js'
+import type { Connection, ServiceOptions, IncomingOptions } from './types.js'
 
 const lowercase = (path?: string) =>
   typeof path === 'string' ? path.toLowerCase() : undefined
@@ -16,7 +16,7 @@ const prepareIncoming = (incoming: IncomingOptions) => ({
 const servers: Record<number, http.Server> = {}
 
 export default async function connect(
-  options: EndpointOptions,
+  options: ServiceOptions,
   _authentication: Record<string, unknown> | null,
   _connection: Connection | null
 ): Promise<Connection | null> {
