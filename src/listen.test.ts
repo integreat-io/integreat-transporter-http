@@ -4,7 +4,8 @@ import http from 'http'
 import got from 'got'
 import type { Connection } from './types.js'
 
-import listen from './listen.js'
+import listen, { actionFromRequest } from './listen.js'
+import { IncomingMessage } from 'http'
 
 // Setup
 
@@ -208,6 +209,8 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
 })
 
 test('should lowercase host and path in dispatched action', async (t) => {
+  // Note: This test does not really check that we lowercast the host and path,
+  // as Got will do it for us anyway. See next test for the real verification.
   const responseData = JSON.stringify([{ id: 'ent1' }])
   const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
   const connection = {
@@ -221,7 +224,7 @@ test('should lowercase host and path in dispatched action', async (t) => {
     type: 'GET',
     payload: {
       method: 'GET',
-      hostname: 'localhost', // We can't really test this, as got will lowercase it for us
+      hostname: 'localhost',
       port: 9030,
       path: '/entries',
       queryParams: {
@@ -251,6 +254,47 @@ test('should lowercase host and path in dispatched action', async (t) => {
   t.is(response.body, responseData)
 
   connection.server.close()
+})
+
+test('should lowercase host and path when creating action from request', async (t) => {
+  const request = {
+    method: 'GET',
+    url: '/ENTRIES?filter=all&format=json',
+    headers: {
+      host: 'LOCALHOST',
+      'content-type': 'application/json',
+    },
+    [Symbol.asyncIterator]() {
+      return {
+        next() {
+          return Promise.resolve({ value: undefined, done: true })
+        },
+      }
+    },
+  } as IncomingMessage
+  const expectedAction = {
+    type: 'GET',
+    payload: {
+      method: 'GET',
+      hostname: 'localhost',
+      port: 9030,
+      path: '/entries',
+      queryParams: {
+        filter: 'all',
+        format: 'json',
+      },
+      contentType: 'application/json',
+      headers: {
+        'content-type': 'application/json',
+        host: 'LOCALHOST', // We don't touch the casing here
+      },
+    },
+    meta: {},
+  }
+
+  const ret = await actionFromRequest(request, 9030)
+
+  t.deepEqual(ret, expectedAction)
 })
 
 test('should dispatch other content-type', async (t) => {

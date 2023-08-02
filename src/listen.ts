@@ -107,7 +107,7 @@ function parseUrl(request: http.IncomingMessage) {
   return []
 }
 
-async function actionFromRequest(
+export async function actionFromRequest(
   request: http.IncomingMessage,
   incomingPort: number
 ) {
