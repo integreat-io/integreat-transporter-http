@@ -19,13 +19,14 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "npm run lint && npm run build && c8 --reporter=text-summary ava --config ./ava-dist.config.cjs",
+    "test": "c8 --reporter=text-summary ava --config ./ava-dist.config.cjs",
     "test:inspect": "node --inspect node_modules/ava/profile.js",
     "test:watch": "npm run dev",
     "dev": "ava --watch",
     "build": "tsc",
     "coverage": "c8 report",
-    "lint": "eslint --ext .ts src"
+    "lint": "eslint --ext .ts src",
+    "verify": "npm run lint && npm run build && npm test"
   },
   "engines": {
     "node": ">= 18"
@@ -38,9 +39,9 @@
   "devDependencies": {
     "@integreat/ts-dev-setup": "^4.1.1",
     "@types/debug": "^4.1.8",
-    "@types/node": "^20.4.5",
+    "@types/node": "^20.4.7",
     "@types/sinon": "^10.0.16",
-    "integreat": "^1.0.0-rc.2",
+    "integreat": "^1.0.0",
     "nock": "^13.3.2",
     "sinon": "^15.2.0"
   }
