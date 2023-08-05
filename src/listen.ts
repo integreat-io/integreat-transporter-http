@@ -53,16 +53,21 @@ const setIdentAndSourceService = (
 ) =>
   typeof sourceService === 'string'
     ? {
-      ...action,
-      payload: {
-        ...action.payload,
-        sourceService,
-      },
-      meta: { ...action.meta, ident },
-    }
+        ...action,
+        payload: {
+          ...action.payload,
+          sourceService,
+        },
+        meta: { ...action.meta, ident },
+      }
     : { ...action, meta: { ...action.meta, ident } }
 
-function respond(res: http.ServerResponse, statusCode: number, responseDate?: string, responseHeaders?: Headers) {
+function respond(
+  res: http.ServerResponse,
+  statusCode: number,
+  responseDate?: string,
+  responseHeaders?: Headers
+) {
   try {
     res.writeHead(statusCode, {
       'content-type': 'application/json',
@@ -71,11 +76,38 @@ function respond(res: http.ServerResponse, statusCode: number, responseDate?: st
     res.end(responseDate)
   } catch (error) {
     res.writeHead(500)
-    res.end(
-      JSON.stringify({ status: 'error', error: 'Internal server error' })
-    )
+    res.end(JSON.stringify({ status: 'error', error: 'Internal server error' }))
+  }
+}
+
+function wwwAuthHeadersFromOptions(options?: ConnectionIncomingOptions) {
+  const { challenges } = options || {}
+  if (Array.isArray(challenges) && challenges.length > 0) {
+    // There may be more than one challenge, but we only support one for now
+    const challenge = challenges[0]
+    const params = [
+      ...(challenge.realm ? [`realm="${challenge.realm}"`] : []),
+      ...Object.entries(challenge.params).map(
+        ([key, value]) => `${key}="${value}"`
+      ),
+    ].join(', ')
+    return [
+      ['www-authenticate', `${challenge.scheme}${params ? ` ${params}` : ''}`],
+    ]
   }
 
+  return []
+}
+
+function getAuthErrorResponse(
+  response: Response,
+  options?: ConnectionIncomingOptions
+) {
+  if (response.status === 'noaccess' && response.reason === 'noauth') {
+    return { statusCode: 401, headers: wwwAuthHeadersFromOptions(options) }
+  } else {
+    return { statusCode: 403, headers: [] }
+  }
 }
 
 const createHandler = (
@@ -100,7 +132,14 @@ const createHandler = (
       const authResponse = await authenticate({ status: 'granted' }, action)
       const ident = authResponse.access?.ident
       if (authResponse.status !== 'ok' || !ident) {
-        res.writeHead(403)
+        const { statusCode, headers } = getAuthErrorResponse(
+          authResponse,
+          options
+        )
+        for (const [key, value] of headers) {
+          res.setHeader(key, value)
+        }
+        res.writeHead(statusCode)
         res.end()
         return
       }

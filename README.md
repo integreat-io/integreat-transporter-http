@@ -76,6 +76,12 @@ Available options for action meta options:
     the action being dispatched from the listener. Only use this if you want to
     override the default behaviour of Integreat, that is to set the id of the
     service as `sourceService`.
+  - `challenges`: An array of challenge objects, used to form the correct
+    response headers when an incoming request is unauthorized. The objects has
+    the following properties: `scheme`, `realm`, and `params`. The two first
+    are string and are defined by the relevant authentication method, while
+    the last one is an object with key/value pairs that will be added to the
+    header. The default is no challenge.
 
 **A note on headers:** Actions may have an `headers` object on the payload and
 the `meta.options` object. If they are both there, they will be merged, with the

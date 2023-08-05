@@ -528,7 +528,7 @@ test('should respond with 400 on badrequest', async (t) => {
   connection.server.close()
 })
 
-test('should respond with 401 on noaccess', async (t) => {
+test('should respond with 401 on autherror', async (t) => {
   const dispatch = sinon.stub().resolves({
     status: 'autherror',
     error: 'Invalid credentials',
@@ -597,6 +597,86 @@ test('should respond with 403 when authentication with Integreat fails', async (
   t.is(authenticate.callCount, 1)
   t.is(dispatch.callCount, 0)
   t.is(response.statusCode, 403)
+
+  connection.server.close()
+})
+
+test('should respond with 401 when authentication with Integreat returns noaccess and reason noauth', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon.stub().resolves({
+    status: 'noaccess',
+    reason: 'noauth',
+    error: 'No auth info provided',
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9032,
+      sourceService: 'mainApi',
+      challenges: [
+        {
+          scheme: 'Basic',
+          realm: 'Our wonderful API',
+          params: { charset: 'UTF-8' },
+        },
+      ],
+    },
+  }
+  const url = 'http://localhost:9032/entries?filter=all&format=json'
+  const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
+
+  const ret = await listen(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  t.is(authenticate.callCount, 1)
+  t.is(dispatch.callCount, 0)
+  t.is(response.statusCode, 401)
+  t.deepEqual(response.headers['www-authenticate'], expectedHeader)
+  t.deepEqual(ret, { status: 'ok' })
+
+  connection.server.close()
+})
+
+test('should respond with 403 when authentication with Integreat returns autherror and reason invalidauth', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon.stub().resolves({
+    status: 'noaccess',
+    reason: 'noauth',
+    error: 'No auth info provided',
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9033,
+      sourceService: 'mainApi',
+      challenges: [
+        {
+          scheme: 'Basic',
+          realm: 'Our wonderful API',
+          params: { charset: 'UTF-8' },
+        },
+      ],
+    },
+  }
+  const url = 'http://localhost:9033/entries?filter=all&format=json'
+  const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
+
+  const ret = await listen(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  t.is(authenticate.callCount, 1)
+  t.is(dispatch.callCount, 0)
+  t.is(response.statusCode, 401)
+  t.deepEqual(response.headers['www-authenticate'], expectedHeader)
+  t.deepEqual(ret, { status: 'ok' })
 
   connection.server.close()
 })

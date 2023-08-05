@@ -86,6 +86,46 @@ test('should set incoming options on connection', async (t) => {
     path: ['/entries'],
     port: 3000,
     sourceService: 'mainApi',
+    challenges: [],
+  }
+
+  const ret = await connect(options, null, null)
+
+  t.is(ret?.status, 'ok')
+  t.deepEqual(ret?.incoming, expectedIncoming)
+
+  ret?.server?.close()
+})
+
+test('should set incoming options on connection with challenges', async (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+    incoming: {
+      host: 'test2.api',
+      path: '/entries',
+      port: 3000,
+      sourceService: 'mainApi',
+      challenges: [
+        {
+          scheme: 'Basic',
+          realm: 'Our wonderful API',
+          params: { charset: 'UTF-8' },
+        },
+      ],
+    },
+  }
+  const expectedIncoming = {
+    host: ['test2.api'],
+    path: ['/entries'],
+    port: 3000,
+    sourceService: 'mainApi',
+    challenges: [
+      {
+        scheme: 'Basic',
+        realm: 'Our wonderful API',
+        params: { charset: 'UTF-8' },
+      },
+    ],
   }
 
   const ret = await connect(options, null, null)
@@ -111,6 +151,7 @@ test('should lower case incoming path and host, and remove empty ones', async (t
     path: ['/entries'],
     port: 3000,
     sourceService: 'mainApi',
+    challenges: [],
   }
 
   const ret = await connect(options, null, null)
@@ -134,6 +175,7 @@ test('should use 8080 as default port when not set in incoming options', async (
     path: ['/entries'],
     port: 8080,
     sourceService: undefined,
+    challenges: [],
   }
 
   const ret = await connect(options, null, null)

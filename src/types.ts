@@ -1,11 +1,18 @@
 import type http from 'http'
 import type { Headers } from 'integreat'
 
+export interface HttpChallenge {
+  scheme: string
+  realm?: string
+  params: Record<string, string>
+}
+
 export interface IncomingOptions {
   host?: string | string[]
   path?: string | string[]
   port?: number
   sourceService?: string
+  challenges?: HttpChallenge[]
 }
 
 export interface ServiceOptions extends Record<string, unknown> {
@@ -24,6 +31,7 @@ export interface ConnectionIncomingOptions {
   path: string[]
   port: number
   sourceService?: string
+  challenges?: HttpChallenge[]
 }
 
 export interface Connection extends Record<string, unknown> {
