@@ -625,7 +625,7 @@ test('should send with headers from endpoint', async (t) => {
     reqheaders: {
       authorization: 'The_token',
       'If-Match': '3-871801934',
-      'user-agent': 'integreat-transporter-http/0.1',
+      'user-agent': 'integreat-transporter-http/1.0',
     },
   })
     .put('/entries/ent1', '{}')
