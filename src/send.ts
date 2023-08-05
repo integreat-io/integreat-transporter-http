@@ -1,8 +1,5 @@
 import debugFn from 'debug'
-import got, {
-  Response as GotResponse,
-  Options as GotOptions,
-} from 'got'
+import got, { Response as GotResponse, Options as GotOptions } from 'got'
 import queryString from 'query-string'
 import { createResponse, createResponseWithError } from './utils/response.js'
 import { isDate } from './utils/is.js'
@@ -38,7 +35,6 @@ const logResponse = (
   debug('%s: %o', message, response)
 }
 
-
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
   doRemove && typeof uri === 'string' && uri.startsWith('/')
     ? uri.slice(1)
@@ -61,10 +57,10 @@ const prepareQueryValue = (value: unknown): string =>
   isDate(value)
     ? value.toISOString()
     : value === null
-      ? ''
-      : ['string', 'number', 'boolean'].includes(typeof value)
-        ? String(value)
-        : JSON.stringify(value)
+    ? ''
+    : ['string', 'number', 'boolean'].includes(typeof value)
+    ? String(value)
+    : JSON.stringify(value)
 
 const prepareQueryParams = (params: Record<string, unknown>) =>
   new URLSearchParams(
@@ -74,9 +70,9 @@ const prepareQueryParams = (params: Record<string, unknown>) =>
         (params, [key, value]) =>
           Array.isArray(value)
             ? [
-              ...params,
-              ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
-            ]
+                ...params,
+                ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
+              ]
             : [...params, [key, prepareQueryValue(value)] as KeyVal],
         [] as KeyVal[]
       ) as URLSearchArray
@@ -95,12 +91,12 @@ const generateQueryParams = (
 const removeContentTypeIf = (headers: Headers, doRemove: boolean) =>
   doRemove
     ? Object.entries(headers).reduce(
-      (headers, [key, value]) =>
-        key.toLowerCase() === 'content-type'
-          ? headers
-          : { ...headers, [key]: value },
-      {}
-    )
+        (headers, [key, value]) =>
+          key.toLowerCase() === 'content-type'
+            ? headers
+            : { ...headers, [key]: value },
+        {}
+      )
     : headers
 
 const createHeaders = (
@@ -109,7 +105,7 @@ const createHeaders = (
   headers?: Headers,
   auth?: Record<string, unknown> | boolean | null
 ): Record<string, string | string[]> => ({
-  'user-agent': 'integreat-transporter-http/0.1',
+  'user-agent': 'integreat-transporter-http/1.0',
   ...(typeof data === 'string'
     ? { 'Content-Type': 'text/plain' }
     : { 'Content-Type': 'application/json' }), // Will be removed later on if GET
@@ -170,12 +166,12 @@ const responseFromGotResponse = (
 ) =>
   isOkResponse(gotResponse)
     ? createResponse(
-      action,
-      'ok',
-      extractResponseData(gotResponse, responseFormatFromAction(action)),
-      undefined,
-      gotResponse.headers
-    )
+        action,
+        'ok',
+        extractResponseData(gotResponse, responseFormatFromAction(action)),
+        undefined,
+        gotResponse.headers
+      )
     : createResponseWithError(action, url, gotResponse)
 
 export default async function send(
