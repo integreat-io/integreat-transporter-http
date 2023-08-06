@@ -9,8 +9,8 @@ export const dataFromResponse = (response: Response) =>
   typeof response.data === 'string'
     ? response.data
     : response.data === null || response.data === undefined
-      ? undefined
-      : JSON.stringify(response.data)
+    ? undefined
+    : JSON.stringify(response.data)
 
 export function statusCodeFromResponse(response: Response) {
   switch (response.status) {
@@ -23,7 +23,7 @@ export function statusCodeFromResponse(response: Response) {
     case 'autherror':
       return 401
     case 'noaccess':
-      return 403
+      return response.reason === 'noauth' ? 401 : 403
     case 'notfound':
     case 'noaction':
       return 404
@@ -39,10 +39,10 @@ export const normalizeHeaders = (
 ) =>
   headers
     ? Object.fromEntries(
-      Object.entries(headers)
-        .filter(([, value]) => value !== undefined)
-        .map(([key, value]) => [key.toLowerCase(), value])
-    )
+        Object.entries(headers)
+          .filter(([, value]) => value !== undefined)
+          .map(([key, value]) => [key.toLowerCase(), value])
+      )
     : undefined
 
 export const createResponse = (
@@ -76,10 +76,10 @@ const extractFromError = (
   isGotResponse(error)
     ? [error.statusCode, error.statusMessage, error.body]
     : error instanceof HTTPError
-      ? [error.response.statusCode, error.response.statusMessage, undefined]
-      : error instanceof Error
-        ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
-        : [undefined, 'Unknown response', undefined]
+    ? [error.response.statusCode, error.response.statusMessage, undefined]
+    : error instanceof Error
+    ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
+    : [undefined, 'Unknown response', undefined]
 
 function responseStatusFromCode(statusCode?: number) {
   switch (statusCode) {

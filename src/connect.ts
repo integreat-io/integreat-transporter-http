@@ -1,16 +1,28 @@
 import http from 'http'
 import { ensureArray } from './utils/array.js'
 import { isNonEmptyString } from './utils/is.js'
-import type { Connection, ServiceOptions, IncomingOptions } from './types.js'
+import type {
+  Connection,
+  ServiceOptions,
+  IncomingOptions,
+  HttpChallenge,
+} from './types.js'
 
 const lowercase = (path?: string) =>
   typeof path === 'string' ? path.toLowerCase() : undefined
+
+const prepareChallenge = ({ scheme, realm, params = {} }: HttpChallenge) => ({
+  scheme,
+  realm,
+  params,
+})
 
 const prepareIncoming = (incoming: IncomingOptions) => ({
   host: ensureArray(incoming.host).map(lowercase).filter(isNonEmptyString),
   path: ensureArray(incoming.path).map(lowercase).filter(isNonEmptyString),
   port: incoming.port || 8080,
   sourceService: incoming.sourceService,
+  challenges: (incoming.challenges || []).map(prepareChallenge),
 })
 
 const servers: Record<number, http.Server> = {}
