@@ -91,22 +91,25 @@ function wwwAuthHeadersFromOptions(options?: ConnectionIncomingOptions) {
         ([key, value]) => `${key}="${value}"`
       ),
     ].join(', ')
-    return [
-      ['www-authenticate', `${challenge.scheme}${params ? ` ${params}` : ''}`],
-    ]
+    return {
+      ['www-authenticate']: `${challenge.scheme}${params ? ` ${params}` : ''}`,
+    }
   }
 
-  return []
+  return {}
 }
 
-function getAuthErrorResponse(
+function setAuthHeaders(
   response: Response,
   options?: ConnectionIncomingOptions
 ) {
   if (response.status === 'noaccess' && response.reason === 'noauth') {
-    return { statusCode: 401, headers: wwwAuthHeadersFromOptions(options) }
+    return {
+      ...response,
+      headers: { ...response.headers, ...wwwAuthHeadersFromOptions(options) },
+    }
   } else {
-    return { statusCode: 403, headers: [] }
+    return response
   }
 }
 
@@ -131,26 +134,19 @@ const createHandler = (
     if (dispatch && authenticate) {
       const authResponse = await authenticate({ status: 'granted' }, action)
       const ident = authResponse.access?.ident
+
+      let response: Response
       if (authResponse.status !== 'ok' || !ident) {
-        const { statusCode, headers } = getAuthErrorResponse(
-          authResponse,
-          options
+        response = authResponse
+      } else {
+        const sourceService = options?.sourceService
+        response = await dispatch(
+          setIdentAndSourceService(action, ident, sourceService)
         )
-        for (const [key, value] of headers) {
-          res.setHeader(key, value)
-        }
-        res.writeHead(statusCode)
-        res.end()
-        return
       }
-
-      const sourceService = options?.sourceService
-      const response = await dispatch(
-        setIdentAndSourceService(action, ident, sourceService)
-      )
-
       const responseDate = dataFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
+      response = setAuthHeaders(response, options)
 
       return respond(res, statusCode, responseDate, response.headers)
     } else {

@@ -641,13 +641,15 @@ test('should respond with 401 when authentication with Integreat returns noacces
   connection.server.close()
 })
 
-test('should respond with 403 when authentication with Integreat returns autherror and reason invalidauth', async (t) => {
-  const responseData = JSON.stringify([{ id: 'ent1' }])
-  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
-  const authenticate = sinon.stub().resolves({
+test('should respond with 401 when a regular response has noaccess and reason noauth', async (t) => {
+  const dispatch = sinon.stub().resolves({
     status: 'noaccess',
     reason: 'noauth',
-    error: 'No auth info provided',
+    error: 'Auth invalidated in mutation',
+  })
+  const authenticate = sinon.stub().resolves({
+    status: 'ok',
+    access: { ident: { id: 'userFromIntegreat' } },
   })
   const connection = {
     status: 'ok',
@@ -667,6 +669,46 @@ test('should respond with 403 when authentication with Integreat returns autherr
     },
   }
   const url = 'http://localhost:9033/entries?filter=all&format=json'
+  const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
+
+  const ret = await listen(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  t.is(authenticate.callCount, 1)
+  t.is(dispatch.callCount, 1)
+  t.is(response.statusCode, 401)
+  t.deepEqual(response.headers['www-authenticate'], expectedHeader)
+  t.deepEqual(ret, { status: 'ok' })
+
+  connection.server.close()
+})
+
+test('should respond with 403 when authentication with Integreat returns autherror and reason invalidauth', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon.stub().resolves({
+    status: 'noaccess',
+    reason: 'noauth',
+    error: 'No auth info provided',
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9034,
+      sourceService: 'mainApi',
+      challenges: [
+        {
+          scheme: 'Basic',
+          realm: 'Our wonderful API',
+          params: { charset: 'UTF-8' },
+        },
+      ],
+    },
+  }
+  const url = 'http://localhost:9034/entries?filter=all&format=json'
   const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
 
   const ret = await listen(dispatch, connection, authenticate)
