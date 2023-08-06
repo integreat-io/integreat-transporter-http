@@ -105,7 +105,7 @@ const createHeaders = (
   headers?: Headers,
   auth?: Record<string, unknown> | boolean | null
 ): Record<string, string | string[]> => ({
-  'user-agent': 'integreat-transporter-http/1.0',
+  'user-agent': 'integreat-transporter-http/1.1',
   ...(typeof data === 'string'
     ? { 'Content-Type': 'text/plain' }
     : { 'Content-Type': 'application/json' }), // Will be removed later on if GET
