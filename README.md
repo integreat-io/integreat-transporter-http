@@ -2,7 +2,8 @@
 
 Transporter that lets
 [Integreat](https://github.com/integreat-io/integreat) send and receive data
-over http/https.
+over http/https. Also contains an authenticator for http specific
+authentication.
 
 [![npm Version](https://img.shields.io/npm/v/integreat-transporter-http.svg)](https://www.npmjs.com/package/integreat-transporter-http)
 [![Maintainability](https://api.codeclimate.com/v1/badges/6abe9cf4601fe08a18b8/maintainability)](https://codeclimate.com/github/integreat-io/integreat-transporter-http/maintainability)
@@ -29,7 +30,7 @@ import httpTransporter from 'integreat-transport-http'
 import defs from './config'
 
 const great = Integreat.create(defs, {
-  transporters: { http: httpTransporter() },
+  transporters: { http: httpTransporter },
 })
 
 // ... and then dispatch actions as usual
@@ -91,6 +92,40 @@ the `payload.data`. If it is a string, the content type will be `'text/plain'`,
 otherwise it will be `'application/json'`. Finally, the authenticator set for
 the service may have provided an object of headers, which will override
 everything else.
+
+### Authenticator
+
+The included http authenticator verifies `Authorization` header according to the
+given options, and responds with an `ok` response with an `ident` on the
+`access` object, or an error.
+
+Example of use:
+
+```javascript
+import Integreat from 'integreat'
+import httpTransporter from 'integreat-transport-http'
+import httpAuthenticator from 'integreat-transport-http/authenticator.js'
+import defs from './config'
+
+const great = Integreat.create(defs, {
+  authenticators: { auth: httpAuthenticator }
+  transporters: { http: httpTransporter },
+})
+
+// ... and then dispatch actions as usual
+```
+
+The auth options are:
+
+- `type`: Only `'Basic'` is supported for now, but there will be other options
+  here.
+- `key`: For "Basic" this is the username to expect from incoming actions.
+- `secret`: For "Basic" this is the password to expect from incoming actions.
+
+The "Basic" type will compare the `key` and `secret` to the `Authorization`
+header and use the key as ident id if they match.
+
+Only incoming actions are supported for now.
 
 ### Running the tests
 

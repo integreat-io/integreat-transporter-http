@@ -14,6 +14,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./authenticator.js": {
+      "import": "./dist/authenticator/index.js",
+      "types": "./dist/authenticator/index.d.ts"
     }
   },
   "main": "dist/index.js",
@@ -41,7 +45,7 @@
     "@types/debug": "^4.1.8",
     "@types/node": "^20.4.8",
     "@types/sinon": "^10.0.16",
-    "integreat": "^1.0.1",
+    "integreat": "^1.1.0-rc.1",
     "nock": "^13.3.2",
     "sinon": "^15.2.0"
   }
