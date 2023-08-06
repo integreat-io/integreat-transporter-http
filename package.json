@@ -45,7 +45,7 @@
     "@types/debug": "^4.1.8",
     "@types/node": "^20.4.8",
     "@types/sinon": "^10.0.16",
-    "integreat": "^1.1.0-rc.1",
+    "integreat": "^1.1.0",
     "nock": "^13.3.2",
     "sinon": "^15.2.0"
   }
