@@ -36,6 +36,16 @@ const stripIrrelevantHeadersFromAction = (action: Action) => ({
   },
 })
 
+const removeIdentAndSourceService = ({
+  type,
+  payload: { sourceService, ...payload },
+  meta: { ident, ...meta } = {},
+}: Action) => ({
+  type,
+  payload,
+  meta,
+})
+
 // Tests
 
 test('should return ok on listen', async (t) => {
@@ -459,6 +469,49 @@ test('should use content type from response headers', async (t) => {
 })
 
 test.todo('should remove response headers with value undefined')
+
+test('should call authenticate with authentication and action', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon.stub().resolves({
+    status: 'ok',
+    access: { ident: { id: 'johnf' } },
+  })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9035,
+      sourceService: 'mainApi',
+      challenges: [
+        {
+          scheme: 'Basic',
+          realm: 'Our wonderful API',
+          params: { charset: 'UTF-8' },
+        },
+      ],
+    },
+  }
+  const url = 'http://localhost:9035/entries?filter=all&format=json'
+
+  const ret = await listen(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  const dispatchedAction = dispatch.args[0][0]
+  t.is(authenticate.callCount, 1)
+  t.deepEqual(authenticate.args[0][0], { status: 'granted' })
+  t.deepEqual(
+    authenticate.args[0][1],
+    removeIdentAndSourceService(dispatchedAction)
+  )
+  t.is(response.statusCode, 200)
+
+  connection.server.close()
+})
 
 test('should respond with 201 on queued', async (t) => {
   const dispatch = sinon.stub().resolves({
