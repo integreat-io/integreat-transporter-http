@@ -57,6 +57,9 @@ Available options for action meta options:
   Value will be forced to strings
 - `authAsQuery`: When set to `true`, auth object will be included as query
   params. Use with care
+- `authInData`: This signals to the transporter that we will provide the auth
+  in the data of the actions, and so it will not be set in the headers. Default
+  is `false`
 - `headers`: An object of key/value pairs use directly as request headers. It
   will be combined with the `headers` object on the `payload`.
 - `responseFormat`: Controls what format the body data is returned in. `base64`
