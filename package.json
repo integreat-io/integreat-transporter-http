@@ -1,6 +1,6 @@
 {
   "name": "integreat-transporter-http",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "HTTP transporter for Integreat",
   "keywords": [
     "integreat",
