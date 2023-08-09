@@ -111,7 +111,7 @@ const createHeaders = (
     : { 'Content-Type': 'application/json' }), // Will be removed later on if GET
   ...options?.headers,
   ...headers,
-  ...(auth === true || options?.authAsQuery ? {} : auth),
+  ...(auth === true || options?.authAsQuery || options?.authInData ? {} : auth),
 })
 
 const selectMethod = (options?: ServiceOptions, data?: unknown) =>

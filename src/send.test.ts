@@ -676,7 +676,7 @@ test('should support custom timeout in milliseconds', async (t) => {
   t.is(typeof ret.error, 'string')
 })
 
-test('should retrieve with auth headers', async (t) => {
+test('should send with auth headers', async (t) => {
   nock('http://json14.test', {
     reqheaders: {
       authorization: 'The_token',
@@ -701,6 +701,34 @@ test('should retrieve with auth headers', async (t) => {
   const ret = await send(action, null)
 
   t.is(ret.status, 'ok', ret.error)
+})
+
+test('should not send with auth headers when authInData is true', async (t) => {
+  nock('http://json28.test', {
+    reqheaders: {
+      authorization: 'The_token',
+    },
+  })
+    .put('/entries/ent1', '{}')
+    .reply(200)
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data: '{}' },
+    meta: {
+      options: prepareOptions(
+        {
+          uri: 'http://json28.test/entries/ent1',
+          authInData: true,
+        },
+        serviceId
+      ),
+      auth: { Authorization: 'The_token' },
+    },
+  }
+
+  const ret = await send(action, null)
+
+  t.is(ret.status, 'error', ret.error) // An error here will tell us that the headers were not sent
 })
 
 test('should retrieve with headers from action', async (t) => {

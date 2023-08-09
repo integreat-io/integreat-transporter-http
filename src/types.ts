@@ -24,6 +24,8 @@ export interface ServiceOptions extends Record<string, unknown> {
   incoming?: IncomingOptions
   responseFormat?: string
   timeout?: number
+  authAsQuery?: boolean
+  authInData?: boolean
 }
 
 export interface ConnectionIncomingOptions {
