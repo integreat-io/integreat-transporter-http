@@ -626,11 +626,12 @@ test('should respond with 403 on noaccess', async (t) => {
 })
 
 test('should respond with 403 when authentication with Integreat fails', async (t) => {
+  const authResponse = { status: 'noaccess', error: 'Not set up right' }
   const responseData = JSON.stringify([{ id: 'ent1' }])
-  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
-  const authenticate = sinon
+  const dispatch = sinon
     .stub()
-    .resolves({ status: 'noaccess', error: 'Not set up right' })
+    .resolves({ ...authResponse, data: responseData })
+  const authenticate = sinon.stub().resolves(authResponse)
   const connection = {
     status: 'ok',
     server: http.createServer(),
@@ -642,26 +643,29 @@ test('should respond with 403 when authentication with Integreat fails', async (
     },
   }
   const url = 'http://localhost:9031/entries?filter=all&format=json'
+  const expectedBody = responseData
 
   const ret = await listen(dispatch, connection, authenticate)
   const response = await got(url, options)
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(authenticate.callCount, 1)
-  t.is(dispatch.callCount, 0)
   t.is(response.statusCode, 403)
+  t.deepEqual(response.body, expectedBody)
+  t.is(dispatch.callCount, 1)
+  t.deepEqual(dispatch.args[0][0].response, authResponse)
 
   connection.server.close()
 })
 
 test('should respond with 401 when authentication with Integreat returns noaccess and reason noauth', async (t) => {
-  const responseData = JSON.stringify([{ id: 'ent1' }])
-  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
-  const authenticate = sinon.stub().resolves({
+  const authResponse = {
     status: 'noaccess',
     reason: 'noauth',
     error: 'No auth info provided',
-  })
+  }
+  const dispatch = sinon.stub().resolves(authResponse)
+  const authenticate = sinon.stub().resolves(authResponse)
   const connection = {
     status: 'ok',
     server: http.createServer(),
@@ -686,10 +690,11 @@ test('should respond with 401 when authentication with Integreat returns noacces
   const response = await got(url, options)
 
   t.is(authenticate.callCount, 1)
-  t.is(dispatch.callCount, 0)
   t.is(response.statusCode, 401)
   t.deepEqual(response.headers['www-authenticate'], expectedHeader)
   t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.deepEqual(dispatch.args[0][0].response, authResponse)
 
   connection.server.close()
 })
@@ -737,13 +742,13 @@ test('should respond with 401 when a regular response has noaccess and reason no
 })
 
 test('should respond with 403 when authentication with Integreat returns autherror and reason invalidauth', async (t) => {
-  const responseData = JSON.stringify([{ id: 'ent1' }])
-  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
-  const authenticate = sinon.stub().resolves({
+  const authResponse = {
     status: 'noaccess',
     reason: 'noauth',
     error: 'No auth info provided',
-  })
+  }
+  const dispatch = sinon.stub().resolves(authResponse)
+  const authenticate = sinon.stub().resolves(authResponse)
   const connection = {
     status: 'ok',
     server: http.createServer(),
@@ -768,10 +773,11 @@ test('should respond with 403 when authentication with Integreat returns autherr
   const response = await got(url, options)
 
   t.is(authenticate.callCount, 1)
-  t.is(dispatch.callCount, 0)
   t.is(response.statusCode, 401)
   t.deepEqual(response.headers['www-authenticate'], expectedHeader)
   t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.deepEqual(dispatch.args[0][0].response, authResponse)
 
   connection.server.close()
 })

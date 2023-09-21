@@ -48,7 +48,7 @@ const actionMatchesOptions = (
 
 const setIdentAndSourceService = (
   action: Action,
-  ident: Ident,
+  ident?: Ident,
   sourceService?: string
 ) =>
   typeof sourceService === 'string'
@@ -99,19 +99,22 @@ function wwwAuthHeadersFromOptions(options?: ConnectionIncomingOptions) {
   return {}
 }
 
-function setAuthHeaders(
+function getHeadersAndSetAuthHeaders(
   response: Response,
   options?: ConnectionIncomingOptions
 ) {
   if (response.status === 'noaccess' && response.reason === 'noauth') {
-    return {
-      ...response,
-      headers: { ...response.headers, ...wwwAuthHeadersFromOptions(options) },
-    }
+    return { ...response.headers, ...wwwAuthHeadersFromOptions(options) }
   } else {
-    return response
+    return response.headers
   }
 }
+
+// If the authentication attempt failed, set the response to the action before
+// dispatching, so that Integreat may handle the error. This allows for
+// mutating the response etc.
+const setResponseIfAuthError = (action: Action, response: Response) =>
+  response.status !== 'ok' ? { ...action, response } : action
 
 const createHandler = (
   ourServices: [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][],
@@ -135,20 +138,17 @@ const createHandler = (
       const authResponse = await authenticate({ status: 'granted' }, action)
       const ident = authResponse.access?.ident
 
-      let response: Response
-      if (authResponse.status !== 'ok' || !ident) {
-        response = authResponse
-      } else {
-        const sourceService = options?.sourceService
-        response = await dispatch(
-          setIdentAndSourceService(action, ident, sourceService)
-        )
-      }
+      const sourceService = options?.sourceService
+      const nextAction = setResponseIfAuthError(
+        setIdentAndSourceService(action, ident, sourceService),
+        authResponse
+      )
+      const response = await dispatch(nextAction)
       const responseDate = dataFromResponse(response)
       const statusCode = statusCodeFromResponse(response)
-      response = setAuthHeaders(response, options)
+      const headers = getHeadersAndSetAuthHeaders(response, options)
 
-      return respond(res, statusCode, responseDate, response.headers)
+      return respond(res, statusCode, responseDate, headers)
     } else {
       res.writeHead(404)
       res.end()
