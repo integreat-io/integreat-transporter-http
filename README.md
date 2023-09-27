@@ -19,14 +19,14 @@ Requires node v18 and Integreat v1.0.
 Install from npm:
 
 ```
-npm install integreat-transport-http
+npm install integreat-transporter-http
 ```
 
 Example of use:
 
 ```javascript
 import Integreat from 'integreat'
-import httpTransporter from 'integreat-transport-http'
+import httpTransporter from 'integreat-transporter-http'
 import defs from './config'
 
 const great = Integreat.create(defs, {
@@ -106,8 +106,8 @@ Example of use:
 
 ```javascript
 import Integreat from 'integreat'
-import httpTransporter from 'integreat-transport-http'
-import httpAuthenticator from 'integreat-transport-http/authenticator.js'
+import httpTransporter from 'integreat-transporter-http'
+import httpAuthenticator from 'integreat-transporter-http/authenticator.js'
 import defs from './config'
 
 const great = Integreat.create(defs, {
