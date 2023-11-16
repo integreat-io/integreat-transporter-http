@@ -96,6 +96,31 @@ otherwise it will be `'application/json'`. Finally, the authenticator set for
 the service may have provided an object of headers, which will override
 everything else.
 
+#### HTTP statuses and Integreat statuses
+
+When sending a request, the transporter will map the http status code to an
+Integreat status code. The mapping is as follows:
+
+- `400` -> `'badrequest'`
+- `401` -> `'noaccess'`
+- `403` -> `'noaccess'`
+- `404` -> `'notfound'`
+- `408` -> `'timeout'`
+- Everything else -> `'error'`
+
+When listening for incoming requests, the transporter will map the Integreat
+status code from the response to an http status code. The mapping is as follows:
+
+- `'ok'` -> `200`
+- `'noaction'` -> `200`
+- `'queued'` -> `201`
+- `'badrequest'` -> `400`
+- `'autherror'` -> `401`
+- `'noaccess'` -> `403` (or `401` when the `reason` is `'noauth'`)
+- `'notfound'` -> `404`
+- `'timeout'` -> `408`
+- Everything else -> `500`
+
 ### Authenticator
 
 The included http authenticator verifies `Authorization` header according to the
