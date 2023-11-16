@@ -9,12 +9,13 @@ export const dataFromResponse = (response: Response) =>
   typeof response.data === 'string'
     ? response.data
     : response.data === null || response.data === undefined
-    ? undefined
-    : JSON.stringify(response.data)
+      ? undefined
+      : JSON.stringify(response.data)
 
 export function statusCodeFromResponse(response: Response) {
   switch (response.status) {
     case 'ok':
+    case 'noaction':
       return 200
     case 'queued':
       return 201
@@ -25,7 +26,6 @@ export function statusCodeFromResponse(response: Response) {
     case 'noaccess':
       return response.reason === 'noauth' ? 401 : 403
     case 'notfound':
-    case 'noaction':
       return 404
     case 'timeout':
       return 408
@@ -35,13 +35,13 @@ export function statusCodeFromResponse(response: Response) {
 }
 
 export const normalizeHeaders = (
-  headers?: Record<string, string | string[] | undefined>
+  headers?: Record<string, string | string[] | undefined>,
 ) =>
   headers
     ? Object.fromEntries(
         Object.entries(headers)
           .filter(([, value]) => value !== undefined)
-          .map(([key, value]) => [key.toLowerCase(), value])
+          .map(([key, value]) => [key.toLowerCase(), value]),
       )
     : undefined
 
@@ -50,7 +50,7 @@ export const createResponse = (
   status: string,
   data: unknown,
   error?: string,
-  headers?: Headers
+  headers?: Headers,
 ): Response => ({
   ...action.response,
   status,
@@ -71,15 +71,15 @@ const getStatusCodeFromError = (error: Error) =>
   isGetRequestError(error) && error.code === 'ETIMEDOUT' ? 408 : undefined
 
 const extractFromError = (
-  error: unknown
+  error: unknown,
 ): [number | undefined, string | undefined, unknown] =>
   isGotResponse(error)
     ? [error.statusCode, error.statusMessage, error.body]
     : error instanceof HTTPError
-    ? [error.response.statusCode, error.response.statusMessage, undefined]
-    : error instanceof Error
-    ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
-    : [undefined, 'Unknown response', undefined]
+      ? [error.response.statusCode, error.response.statusMessage, undefined]
+      : error instanceof Error
+        ? [getStatusCodeFromError(error), error.message, undefined] // TODO: Return error.message in debug mode only?
+        : [undefined, 'Unknown response', undefined]
 
 function responseStatusFromCode(statusCode?: number) {
   switch (statusCode) {
@@ -102,7 +102,7 @@ function errorFromStatus(
   hasAuth: boolean,
   url: string,
   statusCode?: number,
-  statusMessage?: string
+  statusMessage?: string,
 ) {
   if (statusCode === undefined) {
     return `Server returned '${statusMessage}' for ${url}`
@@ -123,7 +123,7 @@ function errorFromStatus(
 export function createResponseWithError(
   action: Action,
   url: string,
-  err: unknown
+  err: unknown,
 ) {
   const [statusCode, statusMessage, data] = extractFromError(err)
 
@@ -133,7 +133,7 @@ export function createResponseWithError(
     !!action.meta?.auth,
     url,
     statusCode,
-    statusMessage
+    statusMessage,
   )
 
   return createResponse(action, status, data, error)

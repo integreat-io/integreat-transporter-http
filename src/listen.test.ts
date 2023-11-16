@@ -804,7 +804,7 @@ test('should respond with 404 on notfound', async (t) => {
   connection.server.close()
 })
 
-test('should respond with 404 on noaction', async (t) => {
+test('should respond with 200 on noaction', async (t) => {
   const dispatch = sinon.stub().resolves({
     status: 'noaction',
     error: 'Not supported',
@@ -821,7 +821,7 @@ test('should respond with 404 on noaction', async (t) => {
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 1)
-  t.is(response.statusCode, 404)
+  t.is(response.statusCode, 200)
 
   connection.server.close()
 })
