@@ -28,28 +28,47 @@ const matchesHostname = (hostname: unknown, patterns: string[]) =>
   patterns.length === 0 ||
   (typeof hostname === 'string' && patterns.includes(hostname))
 
-const matchesPath = (path: unknown, patterns: string[]) =>
-  patterns.length === 0 ||
-  patterns.includes('/') ||
-  (typeof path === 'string' &&
+function matchesPath(path: unknown, patterns: string[]) {
+  if (patterns.length === 0 || patterns.includes('/')) {
+    // We don't need any further checks if the pattern is empty or contains '/'
+    return true
+  }
+
+  const lowerCasePath =
+    typeof path === 'string' ? path.toLowerCase() : undefined
+  return (
+    lowerCasePath &&
     patterns.some(
       (pattern) =>
-        path.startsWith(pattern) &&
-        (path.length === pattern.length ||
-          ['/', '?', '#'].includes(pattern[path.length]))
-    ))
+        lowerCasePath.startsWith(pattern) &&
+        (lowerCasePath.length === pattern.length ||
+          ['/', '?', '#'].includes(pattern[lowerCasePath.length])),
+    )
+  )
+}
 
 const actionMatchesOptions = (
   action: Action,
-  options: ConnectionIncomingOptions
+  options: ConnectionIncomingOptions,
 ) =>
   matchesHostname(action.payload.hostname, options.host) &&
   matchesPath(action.payload.path, options.path)
 
+const lowerCaseActionPath = (action: Action): Action => ({
+  ...action,
+  payload: {
+    ...action.payload,
+    path:
+      typeof action.payload.path === 'string'
+        ? action.payload.path.toLowerCase()
+        : undefined,
+  },
+})
+
 const setIdentAndSourceService = (
   action: Action,
   ident?: Ident,
-  sourceService?: string
+  sourceService?: string,
 ) =>
   typeof sourceService === 'string'
     ? {
@@ -66,7 +85,7 @@ function respond(
   res: http.ServerResponse,
   statusCode: number,
   responseDate?: string,
-  responseHeaders?: Headers
+  responseHeaders?: Headers,
 ) {
   try {
     res.writeHead(statusCode, {
@@ -88,7 +107,7 @@ function wwwAuthHeadersFromOptions(options?: ConnectionIncomingOptions) {
     const params = [
       ...(challenge.realm ? [`realm="${challenge.realm}"`] : []),
       ...Object.entries(challenge.params).map(
-        ([key, value]) => `${key}="${value}"`
+        ([key, value]) => `${key}="${value}"`,
       ),
     ].join(', ')
     return {
@@ -101,7 +120,7 @@ function wwwAuthHeadersFromOptions(options?: ConnectionIncomingOptions) {
 
 function getHeadersAndSetAuthHeaders(
   response: Response,
-  options?: ConnectionIncomingOptions
+  options?: ConnectionIncomingOptions,
 ) {
   if (response.status === 'noaccess' && response.reason === 'noauth') {
     return { ...response.headers, ...wwwAuthHeadersFromOptions(options) }
@@ -118,21 +137,27 @@ const setResponseIfAuthError = (action: Action, response: Response) =>
 
 const createHandler = (
   ourServices: [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][],
-  incomingPort: number
+  incomingPort: number,
 ) =>
   async function handleIncoming(
     req: http.IncomingMessage,
-    res: http.ServerResponse
+    res: http.ServerResponse,
   ) {
-    const action = await actionFromRequest(req, incomingPort)
+    let action = await actionFromRequest(req, incomingPort)
     debug(
-      `Incoming action: ${action.type} ${action.payload.method} ${action.payload.path} ${action.payload.queryParams} ${action.payload.contentType}`
+      `Incoming action: ${action.type} ${action.payload.method} ${action.payload.path} ${action.payload.queryParams} ${action.payload.contentType}`,
     )
     debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
 
     const [options, dispatch, authenticate] =
       ourServices.find(([options]) => actionMatchesOptions(action, options)) ||
       []
+
+    if (!options?.caseSensitivePath) {
+      // We make the path lowercase if `caseSensitivePath` is false. This has to
+      // be done here, as it is dependant on the incoming options.
+      action = lowerCaseActionPath(action)
+    }
 
     if (dispatch && authenticate) {
       const authResponse = await authenticate({ status: 'granted' }, action)
@@ -141,7 +166,7 @@ const createHandler = (
       const sourceService = options?.sourceService
       const nextAction = setResponseIfAuthError(
         setIdentAndSourceService(action, ident, sourceService),
-        authResponse
+        authResponse,
       )
       const response = await dispatch(nextAction)
       const responseDate = dataFromResponse(response)
@@ -196,7 +221,7 @@ function waitOnError(server: http.Server, port: number) {
       setTimeout(() => {
         if (error) {
           debug(
-            `Server on port ${port} gave an error after it was started: ${error}`
+            `Server on port ${port} gave an error after it was started: ${error}`,
           )
           resolve({
             status: 'error',
@@ -222,7 +247,7 @@ function getOurServices(port: number) {
 export default async function listen(
   dispatch: Dispatch,
   connection: Connection | null,
-  authenticate: AuthenticateExternal
+  authenticate: AuthenticateExternal,
 ): Promise<Response> {
   debug('Start listening ...')
   const { incoming, server } = connection || {}

@@ -13,6 +13,7 @@ export interface IncomingOptions {
   port?: number
   sourceService?: string
   challenges?: HttpChallenge[]
+  caseSensitivePath?: boolean
 }
 
 export interface ServiceOptions extends Record<string, unknown> {
@@ -34,6 +35,7 @@ export interface ConnectionIncomingOptions {
   port: number
   sourceService?: string
   challenges?: HttpChallenge[]
+  caseSensitivePath?: boolean
 }
 
 export interface Connection extends Record<string, unknown> {

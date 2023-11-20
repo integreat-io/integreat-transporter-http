@@ -5,7 +5,7 @@ import { actionFromRequest } from './request.js'
 
 // Tests
 
-test('should lowercase host and path when creating action from request', async (t) => {
+test('should lowercase host when creating action from request', async (t) => {
   const request = {
     method: 'GET',
     url: '/ENTRIES?filter=all&format=json',
@@ -27,7 +27,7 @@ test('should lowercase host and path when creating action from request', async (
       method: 'GET',
       hostname: 'localhost',
       port: 9030,
-      path: '/entries',
+      path: '/ENTRIES',
       queryParams: {
         filter: 'all',
         format: 'json',

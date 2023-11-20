@@ -87,6 +87,7 @@ test('should set incoming options on connection', async (t) => {
     port: 3000,
     sourceService: 'mainApi',
     challenges: [],
+    caseSensitivePath: false,
   }
 
   const ret = await connect(options, null, null)
@@ -126,6 +127,7 @@ test('should set incoming options on connection with challenges', async (t) => {
         params: { charset: 'UTF-8' },
       },
     ],
+    caseSensitivePath: false,
   }
 
   const ret = await connect(options, null, null)
@@ -152,6 +154,35 @@ test('should lower case incoming path and host, and remove empty ones', async (t
     port: 3000,
     sourceService: 'mainApi',
     challenges: [],
+    caseSensitivePath: false,
+  }
+
+  const ret = await connect(options, null, null)
+
+  t.is(ret?.status, 'ok')
+  t.deepEqual(ret?.incoming, expectedIncoming)
+
+  ret?.server?.close()
+})
+
+test('should set caseSensitivePath on incoming on the connection', async (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+    incoming: {
+      caseSensitivePath: true,
+      host: ['TEST2.api', '', undefined],
+      path: [null, '/Entries'],
+      port: 3000,
+      sourceService: 'mainApi',
+    },
+  } as ServiceOptions
+  const expectedIncoming = {
+    host: ['test2.api'],
+    path: ['/entries'],
+    port: 3000,
+    sourceService: 'mainApi',
+    challenges: [],
+    caseSensitivePath: true,
   }
 
   const ret = await connect(options, null, null)
@@ -176,6 +207,7 @@ test('should use 8080 as default port when not set in incoming options', async (
     port: 8080,
     sourceService: undefined,
     challenges: [],
+    caseSensitivePath: false,
   }
 
   const ret = await connect(options, null, null)

@@ -120,12 +120,12 @@ test('should dispatch GET request as GET action and respond with response', asyn
   t.deepEqual(authenticate.args[0][0], expectedAuthentication)
   t.deepEqual(
     stripIrrelevantHeadersFromAction(authenticate.args[0][1]),
-    expectedRawAction
+    expectedRawAction,
   )
   t.is(dispatch.callCount, 1)
   t.deepEqual(
     stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
-    expectedAction
+    expectedAction,
   )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
@@ -174,7 +174,7 @@ test('should dispatch POST request as SET action', async (t) => {
   t.is(dispatch.callCount, 1)
   t.deepEqual(
     stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
-    expectedAction
+    expectedAction,
   )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
@@ -244,7 +244,7 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
   t.is(dispatch.callCount, 1)
   t.deepEqual(
     stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
-    expectedAction
+    expectedAction,
   )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
@@ -291,7 +291,55 @@ test('should lowercase host and path in dispatched action', async (t) => {
   t.is(dispatch.callCount, 1)
   t.deepEqual(
     stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
-    expectedAction
+    expectedAction,
+  )
+  t.is(response.statusCode, 200)
+  t.is(response.headers['content-type'], 'application/json')
+  t.is(response.body, responseData)
+
+  connection.server.close()
+})
+
+test('should not lowercase path when caseSensitivePath is true', async (t) => {
+  // Note: This test does not really check that we lowercast the host and path,
+  // as Got will do it for us anyway. See next test for the real verification.
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { port: 9036, host: [], path: [], caseSensitivePath: true },
+  }
+  const url = 'http://LOCALHOST:9036/Entries?filter=all&format=json'
+  const options = { headers: { 'Content-Type': 'application/json' } }
+  const expectedAction = {
+    type: 'GET',
+    payload: {
+      method: 'GET',
+      hostname: 'localhost',
+      port: 9036,
+      path: '/Entries',
+      queryParams: {
+        filter: 'all',
+        format: 'json',
+      },
+      contentType: 'application/json',
+      headers: {
+        'content-type': 'application/json',
+        host: 'localhost:9036',
+      },
+    },
+    meta: { ident: { id: 'userFromIntegreat' } },
+  }
+
+  const ret = await listen(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  t.deepEqual(ret, { status: 'ok' })
+  t.is(dispatch.callCount, 1)
+  t.deepEqual(
+    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
+    expectedAction,
   )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'application/json')
@@ -347,11 +395,11 @@ test('should dispatch other content-type', async (t) => {
   t.is(dispatchedAction.payload.contentType, 'text/xml')
   t.is(
     dispatchedAction.payload.headers['content-type'],
-    'text/xml; charset=utf-8'
+    'text/xml; charset=utf-8',
   )
   t.is(
     dispatchedAction.payload.headers.soapaction,
-    'http://api.net/SomeWeirdSoapAction'
+    'http://api.net/SomeWeirdSoapAction',
   )
   t.is(response.statusCode, 200)
   t.is(response.headers['content-type'], 'text/xml;charset=utf-8')
@@ -506,7 +554,7 @@ test('should call authenticate with authentication and action', async (t) => {
   t.deepEqual(authenticate.args[0][0], { status: 'granted' })
   t.deepEqual(
     authenticate.args[0][1],
-    removeIdentAndSourceService(dispatchedAction)
+    removeIdentAndSourceService(dispatchedAction),
   )
   t.is(response.statusCode, 200)
 

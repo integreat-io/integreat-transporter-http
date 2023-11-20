@@ -2,7 +2,7 @@
 
 Transporter that lets
 [Integreat](https://github.com/integreat-io/integreat) send and receive data
-over http/https. Also contains an authenticator for http specific
+over http/https. Also contains [an authenticator](#authenticator) for http specific
 authentication.
 
 [![npm Version](https://img.shields.io/npm/v/integreat-transporter-http.svg)](https://www.npmjs.com/package/integreat-transporter-http)
@@ -48,6 +48,8 @@ Example source configuration:
 }
 ```
 
+### Transporter
+
 Available options for action meta options:
 
 - `uri`: The request uri
@@ -86,6 +88,10 @@ Available options for action meta options:
     are string and are defined by the relevant authentication method, while
     the last one is an object with key/value pairs that will be added to the
     header. The default is no challenge.
+  - `caseSensitivePath`: When set to `true`, the path will keep its original
+    case. Default is `false`. Note that the default will change in the next
+    major version, so it's good practice to set it explicitly and not rely on
+    the default.
 
 **A note on headers:** Actions may have an `headers` object on the payload and
 the `meta.options` object. If they are both there, they will be merged, with the
@@ -95,6 +101,27 @@ the `payload.data`. If it is a string, the content type will be `'text/plain'`,
 otherwise it will be `'application/json'`. Finally, the authenticator set for
 the service may have provided an object of headers, which will override
 everything else.
+
+#### Incoming requests
+
+An incoming request will be dispatched as an action. `GET` and `OPTIONS`
+requests will be dispatched as an Integreat `GET` action, while all other HTTP
+methods will result in a `SET` action.
+
+The payload of the action will have the following properties:
+
+- `method`: The HTTP method of the incoming request
+- `hostname`: The lower cased hostname of the incoming request
+- `port`: The port number of the incoming request
+- `path`: The path of the incoming request. This will be lower cased as long as
+  the `caseSensitivePath` option is not `true`.
+- `queryParams`: An object of query parameters from the incoming request. Query
+  params are key-value pairs, and the object will have the keys as keys and
+  values as values. All values are strings.
+- `contentType`: The content type string from the incoming request
+- `headers`: An object with all the headers from the incoming request. The keys
+  (the header names) are lower cased, and the values are strings or arrays of
+  strings.
 
 #### HTTP statuses and Integreat statuses
 
