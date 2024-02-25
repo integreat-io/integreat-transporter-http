@@ -38,15 +38,15 @@
   "dependencies": {
     "debug": "^4.3.4",
     "got": "^13.0.0",
-    "query-string": "^8.1.0"
+    "query-string": "^8.2.0"
   },
   "devDependencies": {
     "@integreat/ts-dev-setup": "^5.0.3",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.9.2",
-    "@types/sinon": "^17.0.1",
-    "integreat": "^1.4.6",
-    "nock": "^13.3.8",
+    "@types/node": "^20.11.20",
+    "@types/sinon": "^17.0.3",
+    "integreat": "^1.5.8",
+    "nock": "^13.5.3",
     "sinon": "^17.0.1"
   }
 }
