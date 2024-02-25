@@ -1,5 +1,5 @@
 import type http from 'http'
-import type { Headers } from 'integreat'
+import type { Headers, Dispatch, AuthenticateExternal } from 'integreat'
 
 export interface HttpChallenge {
   scheme: string
@@ -29,6 +29,12 @@ export interface ServiceOptions extends Record<string, unknown> {
   authInData?: boolean
 }
 
+export interface HandlerCase {
+  options: ConnectionIncomingOptions
+  dispatch: Dispatch
+  authenticate: AuthenticateExternal
+}
+
 export interface ConnectionIncomingOptions {
   host: string[]
   path: string[]
@@ -42,4 +48,5 @@ export interface Connection extends Record<string, unknown> {
   status: string
   server?: http.Server
   incoming?: ConnectionIncomingOptions
+  handlerCases?: Map<ConnectionIncomingOptions, HandlerCase>
 }

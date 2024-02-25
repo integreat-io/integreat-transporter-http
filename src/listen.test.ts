@@ -48,11 +48,11 @@ const removeIdentAndSourceService = ({
 
 // Tests
 
-test('should return ok on listen', async (t) => {
+test('should return ok on listen and set handler cases on connection', async (t) => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
-  const connection = {
+  const connection: Connection = {
     status: 'ok',
     server: http.createServer(),
     incoming: { host: ['localhost'], path: ['/entries'], port: 9001 },
@@ -62,8 +62,10 @@ test('should return ok on listen', async (t) => {
 
   t.deepEqual(ret, { status: 'ok' })
   t.is(dispatch.callCount, 0) // No dispatching without requests
+  t.true(connection.handlerCases instanceof Map)
+  t.is(connection.handlerCases?.size, 1)
 
-  connection.server.close()
+  connection.server?.close()
 })
 
 test('should dispatch GET request as GET action and respond with response', async (t) => {
@@ -1158,7 +1160,7 @@ test('should return error when server fails', async (t) => {
   connection.server.close()
 })
 
-test('should return with status badrequest when incomming has no port', async (t) => {
+test('should return with status badrequest when incoming has no port', async (t) => {
   const dispatch = sinon.stub().resolves({ status: 'ok', data: [] })
   const connection = {
     status: 'ok',

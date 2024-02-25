@@ -14,14 +14,18 @@ import type {
   Ident,
   AuthenticateExternal,
 } from 'integreat'
-import type { Connection, ConnectionIncomingOptions } from './types.js'
+import type {
+  Connection,
+  ConnectionIncomingOptions,
+  HandlerCase,
+} from './types.js'
 
 const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')
 
-const services = new Map<
+const handlerCasesPerPort = new Map<
   number,
-  [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][]
+  Map<ConnectionIncomingOptions, HandlerCase>
 >()
 
 const matchesHostname = (hostname: unknown, patterns: string[]) =>
@@ -135,49 +139,71 @@ function getHeadersAndSetAuthHeaders(
 const setResponseIfAuthError = (action: Action, response: Response) =>
   response.status !== 'ok' ? { ...action, response } : action
 
+function findMatchingHandlerCase(
+  handlerCases: Map<ConnectionIncomingOptions, HandlerCase>,
+  action: Action,
+): HandlerCase | undefined {
+  for (const handleCase of handlerCases.values()) {
+    if (actionMatchesOptions(action, handleCase.options)) {
+      return handleCase
+    }
+  }
+  return undefined
+}
+
+async function authAndPrepareAction(
+  action: Action,
+  { options, authenticate }: HandlerCase,
+) {
+  // Authenticate incoming action with Integreat. We use a callback provided
+  // when Integreat called our `listen()` method
+  const authResponse = await authenticate({ status: 'granted' }, action)
+  const ident = authResponse.access?.ident
+
+  // Set received ident from Integreat and the source service on the action
+  const sourceService = options?.sourceService
+  const authenticatedAction = setResponseIfAuthError(
+    setIdentAndSourceService(action, ident, sourceService),
+    authResponse,
+  )
+
+  // We make the path lowercase if `caseSensitivePath` is false. This has to
+  // be done here, as it is dependant on the incoming options.
+  return options.caseSensitivePath
+    ? authenticatedAction
+    : lowerCaseActionPath(authenticatedAction)
+}
+
 const createHandler = (
-  ourServices: [ConnectionIncomingOptions, Dispatch, AuthenticateExternal][],
+  ourServices: Map<ConnectionIncomingOptions, HandlerCase>,
   incomingPort: number,
 ) =>
   async function handleIncoming(
     req: http.IncomingMessage,
     res: http.ServerResponse,
   ) {
-    let action = await actionFromRequest(req, incomingPort)
+    const action = await actionFromRequest(req, incomingPort)
     debug(
       `Incoming action: ${action.type} ${action.payload.method} ${action.payload.path} ${action.payload.queryParams} ${action.payload.contentType}`,
     )
     debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
 
-    const [options, dispatch, authenticate] =
-      ourServices.find(([options]) => actionMatchesOptions(action, options)) ||
-      []
-
-    if (!options?.caseSensitivePath) {
-      // We make the path lowercase if `caseSensitivePath` is false. This has to
-      // be done here, as it is dependant on the incoming options.
-      action = lowerCaseActionPath(action)
-    }
-
-    if (dispatch && authenticate) {
-      const authResponse = await authenticate({ status: 'granted' }, action)
-      const ident = authResponse.access?.ident
-
-      const sourceService = options?.sourceService
-      const nextAction = setResponseIfAuthError(
-        setIdentAndSourceService(action, ident, sourceService),
-        authResponse,
-      )
-      const response = await dispatch(nextAction)
-      const responseDate = dataFromResponse(response)
-      const statusCode = statusCodeFromResponse(response)
-      const headers = getHeadersAndSetAuthHeaders(response, options)
-
-      return respond(res, statusCode, responseDate, headers)
-    } else {
+    const handleCase = findMatchingHandlerCase(ourServices, action)
+    if (!handleCase || !handleCase.dispatch || !handleCase.authenticate) {
+      // No handle case matches, return 404
       res.writeHead(404)
       res.end()
+      return
     }
+    const { options, dispatch } = handleCase
+
+    const incomingAction = await authAndPrepareAction(action, handleCase)
+    const response = await dispatch(incomingAction)
+    const responseDate = dataFromResponse(response)
+    const statusCode = statusCodeFromResponse(response)
+    const headers = getHeadersAndSetAuthHeaders(response, options)
+
+    respond(res, statusCode, responseDate, headers)
   }
 
 function getErrorFromConnection(connection: Connection | null) {
@@ -235,13 +261,15 @@ function waitOnError(server: http.Server, port: number) {
     })
 }
 
-function getOurServices(port: number) {
-  let ourServices = services.get(port)
-  if (!ourServices) {
-    ourServices = []
-    services.set(port, ourServices)
+// Get the handler cases for the specified port. If there are no handler cases
+// for this port yet, we create and stores a map before returning it.
+function getHandlerCasesForPort(port: number) {
+  let handlerCases = handlerCasesPerPort.get(port)
+  if (!handlerCases) {
+    handlerCases = new Map()
+    handlerCasesPerPort.set(port, handlerCases)
   }
-  return ourServices
+  return handlerCases
 }
 
 export default async function listen(
@@ -259,14 +287,15 @@ export default async function listen(
   }
 
   // Set up listener if this is the first service to listen on this port
-  const ourServices = getOurServices(incoming.port)
-  if (ourServices.length === 0) {
+  const handlerCases = getHandlerCasesForPort(incoming.port)
+  if (handlerCases.size === 0) {
     debug(`Set up request handler for first service on port ${incoming.port}`)
-    server.on('request', createHandler(ourServices, incoming.port))
+    server.on('request', createHandler(handlerCases, incoming.port))
   }
 
-  // Add service settings to list
-  ourServices.push([incoming, dispatch, authenticate])
+  // Add as a handler case to handler cases list
+  handlerCases.set(incoming, { options: incoming, dispatch, authenticate })
+  connection!.handlerCases = handlerCases // We know connection is set
 
   // Start listening on port if we're not already listening
   if (!server.listening) {

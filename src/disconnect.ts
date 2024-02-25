@@ -1,9 +1,9 @@
+import stopListening from './stopListening.js'
 import type { Connection } from './types.js'
 
 export default async function disconnect(
-  connection: Connection | null
+  connection: Connection | null,
 ): Promise<void> {
-  if (connection?.server) {
-    connection.server.close()
-  }
+  // Close listener if we are listening
+  await stopListening(connection)
 }
