@@ -43,10 +43,10 @@
   "devDependencies": {
     "@integreat/ts-dev-setup": "^6.0.1",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.11.20",
+    "@types/node": "^20.11.24",
     "@types/sinon": "^17.0.3",
-    "integreat": "^1.6.0-rc.1",
-    "nock": "^13.5.3",
+    "integreat": "^1.6.0-rc.2",
+    "nock": "^13.5.4",
     "sinon": "^17.0.1"
   }
 }
