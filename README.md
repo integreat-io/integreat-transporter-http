@@ -68,6 +68,11 @@ Available options for action meta options:
   will encode the raw body buffer as base64, while `string` will simply return
   the body as a string. Default is `string`
 - `timeout`: Timeout in milliseconds for the request. Default is 120000
+- `throttle`: An object with the properties `limit` and `interval`. Both should
+  be numbers. `limit` defines how many times we will send requests to a
+  service within the time period set by `interval` (in milliseconds). This is
+  very simplistic rate limiting, and will cause the transporter to simply pause
+  between calls when the limit is reached for an interval.
 
 - `incoming`: An object with options to define an incoming service. The precense
   of this object will start an http server, and the properties of the object

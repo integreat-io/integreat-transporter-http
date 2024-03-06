@@ -1,6 +1,7 @@
 import http from 'http'
+import pThrottle from 'p-throttle'
 import { ensureArray } from './utils/array.js'
-import { isNonEmptyString } from './utils/is.js'
+import { isNonEmptyString, isObject } from './utils/is.js'
 import type {
   Connection,
   ServiceOptions,
@@ -32,19 +33,42 @@ const prepareIncoming = (incoming: IncomingOptions) => ({
 
 const servers: Record<number, http.Server> = {}
 
+const isInvalidThrottleOptions = (options: ServiceOptions) =>
+  isObject(options.throttle) &&
+  (typeof options.throttle.limit !== 'number' ||
+    typeof options.throttle.interval !== 'number')
+
+function prepareWaitFn(options: ServiceOptions) {
+  if (options.throttle) {
+    return pThrottle(options.throttle)(async () => {})
+  } else {
+    return undefined
+  }
+}
+
 export default async function connect(
   options: ServiceOptions,
   _authentication: Record<string, unknown> | null,
   _connection: Connection | null,
 ): Promise<Connection | null> {
+  if (isInvalidThrottleOptions(options)) {
+    // Return badrequest if we have throttle options, but they are invalid
+    return { status: 'badrequest', error: 'Invalid throttle options' }
+  }
+  const waitFn = prepareWaitFn(options)
+  const connection = {
+    status: 'ok',
+    ...(waitFn ? { waitFn } : {}), // Set `waitFn()` on the connections when calls to make `send()` wait for throttling
+  }
+
   if (options.incoming) {
     const incoming = prepareIncoming(options.incoming)
 
     const server = servers[incoming.port] || http.createServer()
     servers[incoming.port] = server
 
-    return { status: 'ok', server, incoming }
+    return { ...connection, server, incoming }
   }
 
-  return { status: 'ok' }
+  return connection
 }

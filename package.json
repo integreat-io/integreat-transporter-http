@@ -38,6 +38,7 @@
   "dependencies": {
     "debug": "^4.3.4",
     "got": "^13.0.0",
+    "p-throttle": "^6.1.0",
     "query-string": "^8.2.0"
   },
   "devDependencies": {

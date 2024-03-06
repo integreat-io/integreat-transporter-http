@@ -217,3 +217,27 @@ test('should use 8080 as default port when not set in incoming options', async (
 
   ret?.server?.close()
 })
+
+test('should create a wait function when options has throttle props', async (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+    throttle: { limit: 2, interval: 1000 },
+  }
+
+  const ret = await connect(options, null, null)
+
+  t.is(ret?.status, 'ok')
+  t.is(typeof ret?.waitFn, 'function')
+})
+
+test('should return badrequest when throttle options are incorrect', async (t) => {
+  const options = {
+    uri: 'http://foreign.api',
+    throttle: { limit: 'a lot', interval: 'some time' },
+  } as unknown as ServiceOptions
+
+  const ret = await connect(options, null, null)
+
+  t.is(ret?.status, 'badrequest')
+  t.is(ret?.error, 'Invalid throttle options')
+})

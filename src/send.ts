@@ -25,7 +25,7 @@ const logRequest = (request: Partial<GotOptions>) => {
 
 const logResponse = (
   response: Response,
-  { url, method }: Partial<GotOptions>
+  { url, method }: Partial<GotOptions>,
 ) => {
   const { status, error } = response
   const message =
@@ -57,10 +57,10 @@ const prepareQueryValue = (value: unknown): string =>
   isDate(value)
     ? value.toISOString()
     : value === null
-    ? ''
-    : ['string', 'number', 'boolean'].includes(typeof value)
-    ? String(value)
-    : JSON.stringify(value)
+      ? ''
+      : ['string', 'number', 'boolean'].includes(typeof value)
+        ? String(value)
+        : JSON.stringify(value)
 
 const prepareQueryParams = (params: Record<string, unknown>) =>
   new URLSearchParams(
@@ -74,13 +74,13 @@ const prepareQueryParams = (params: Record<string, unknown>) =>
                 ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
               ]
             : [...params, [key, prepareQueryValue(value)] as KeyVal],
-        [] as KeyVal[]
-      ) as URLSearchArray
+        [] as KeyVal[],
+      ) as URLSearchArray,
   )
 
 const generateQueryParams = (
   { queryParams, authAsQuery, uri }: ServiceOptions = {},
-  auth?: Record<string, unknown> | boolean | null
+  auth?: Record<string, unknown> | boolean | null,
 ) =>
   prepareQueryParams({
     ...extractQueryParamsFromUri(uri),
@@ -95,7 +95,7 @@ const removeContentTypeIf = (headers: Headers, doRemove: boolean) =>
           key.toLowerCase() === 'content-type'
             ? headers
             : { ...headers, [key]: value },
-        {}
+        {},
       )
     : headers
 
@@ -103,7 +103,7 @@ const createHeaders = (
   options?: ServiceOptions,
   data?: unknown,
   headers?: Headers,
-  auth?: Record<string, unknown> | boolean | null
+  auth?: Record<string, unknown> | boolean | null,
 ): Record<string, string | string[]> => ({
   'user-agent': 'integreat-transporter-http/1.1',
   ...(typeof data === 'string'
@@ -133,7 +133,7 @@ function optionsFromEndpoint({
     body: method === 'GET' ? undefined : prepareBody(payload.data),
     headers: removeContentTypeIf(
       createHeaders(options, payload.data, payload.headers, auth),
-      method === 'GET'
+      method === 'GET',
     ),
     retry: { limit: 0 },
     throwHttpErrors: false,
@@ -162,7 +162,7 @@ function responseFormatFromAction(action: Action) {
 const responseFromGotResponse = (
   gotResponse: GotResponse,
   url: string,
-  action: Action
+  action: Action,
 ) =>
   isOkResponse(gotResponse)
     ? createResponse(
@@ -170,13 +170,13 @@ const responseFromGotResponse = (
         'ok',
         extractResponseData(gotResponse, responseFormatFromAction(action)),
         undefined,
-        gotResponse.headers
+        gotResponse.headers,
       )
     : createResponseWithError(action, url, gotResponse)
 
 export default async function send(
   action: Action,
-  _connection: Connection | null
+  connection: Connection | null,
 ): Promise<Response> {
   const { url, ...options } = optionsFromEndpoint(action)
 
@@ -185,13 +185,19 @@ export default async function send(
       action,
       'badrequest',
       undefined,
-      'No uri is provided in the action'
+      'No uri is provided in the action',
     )
   }
 
   const logOptions = {
     url: prepareLogUrl(url, options.searchParams),
     ...options,
+  }
+
+  if (connection?.waitFn) {
+    // This is present when we have throttle setting, and will cause us to wait
+    // if the limit is reaching within the set interval.
+    await connection.waitFn()
   }
 
   try {

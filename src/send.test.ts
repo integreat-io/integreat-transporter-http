@@ -1,6 +1,8 @@
 import test from 'ava'
 import nock from 'nock'
 import transporter from './index.js'
+import { isObject } from './utils/is.js'
+import connect from './connect.js'
 
 import send from './send.js'
 
@@ -8,6 +10,17 @@ import send from './send.js'
 
 const { prepareOptions } = transporter
 const serviceId = 'http'
+
+function extractTimestamp(data: unknown): number {
+  if (typeof data === 'string') {
+    const item = JSON.parse(data)
+    if (isObject(item)) {
+      const timestamp = item.timestamp
+      return typeof timestamp === 'number' ? timestamp : 0
+    }
+  }
+  return 0
+}
 
 test.after.always(() => {
   nock.restore()
@@ -27,7 +40,7 @@ test('should send data and return status, data, and headers', async (t) => {
       {
         'Content-Type': 'application/json; charset=UTF-8',
         Expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
-      }
+      },
     )
   const action = {
     type: 'SET',
@@ -37,7 +50,7 @@ test('should send data and return status, data, and headers', async (t) => {
         {
           uri: 'http://json1.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -66,7 +79,7 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
       {
         'Content-Type': 'application/json; charset=UTF-8',
         Expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
-      }
+      },
     )
   const action = {
     type: 'SET',
@@ -77,7 +90,7 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
           uri: 'http://json1.test/entries/ent1',
           responseFormat: 'base64',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -106,7 +119,7 @@ test('should use GET method as default when no data', async (t) => {
         {
           uri: 'http://json2.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -131,7 +144,7 @@ test('should disregard data when GET method is specified', async (t) => {
           uri: 'http://json2.test/entries/ent1',
           method: 'GET',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -158,7 +171,7 @@ test('should convert all non-string data to JSON', async (t) => {
         {
           uri: 'http://json18.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -184,7 +197,7 @@ test('should use method from endpoint', async (t) => {
           uri: 'http://json3.test/entries/ent1',
           method: 'POST' as const,
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -210,7 +223,7 @@ test('should support base url', async (t) => {
           baseUri: 'http://json19.test/',
           uri: '/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -239,7 +252,7 @@ test('should set query params from options', async (t) => {
             order: 'desc',
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -253,7 +266,7 @@ test('should set query params from options', async (t) => {
 test('should encode query params correctly', async (t) => {
   const scope = nock('http://json21.test')
     .get(
-      '/entries?order=desc&query=*%5B_type%3D%3D%27table%27%26%26key%3D%3D%24table%5D%5B0%5D.fields%7Bkey%2Cname%2Ctype%7D'
+      '/entries?order=desc&query=*%5B_type%3D%3D%27table%27%26%26key%3D%3D%24table%5D%5B0%5D.fields%7Bkey%2Cname%2Ctype%7D',
     )
     .reply(200, [{ id: 'ent1' }])
   const action = {
@@ -269,7 +282,7 @@ test('should encode query params correctly', async (t) => {
             query: "*[_type=='table'&&key==$table][0].fields{key,name,type}",
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -296,7 +309,7 @@ test('should set several query params with the same name from array', async (t) 
             order: 'desc',
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -330,7 +343,7 @@ test('should force query param values to string', async (t) => {
             obj: {},
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -359,7 +372,7 @@ test('should exclude query params with undefined value', async (t) => {
             exclude: undefined,
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -385,7 +398,7 @@ test('should set query params from options when uri has query string', async (t)
           uri: '/entries?page=1',
           queryParams: { order: 'desc' },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -409,7 +422,7 @@ test('should return ok status on all 200-range statuses', async (t) => {
         {
           uri: 'http://json4.test/entries/ent2',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -430,7 +443,7 @@ test('should return error on not found', async (t) => {
         {
           uri: 'http://json5.test/entries/unknown',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -452,7 +465,7 @@ test('should return error on other error', async (t) => {
         {
           uri: 'http://json6.test/entries/error',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -476,7 +489,7 @@ test('should return response on error', async (t) => {
         {
           uri: 'http://json25.test/entries/error',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -500,7 +513,7 @@ test('should return error on request error', async (t) => {
         {
           uri: 'http://json7.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -521,7 +534,7 @@ test('should respond with badrequest on 400', async (t) => {
         {
           uri: 'http://json8.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -543,7 +556,7 @@ test('should respond with timeout on 408', async (t) => {
         {
           uri: 'http://json9.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -565,7 +578,7 @@ test('should reject on 401 with auth', async (t) => {
         {
           uri: 'http://json10.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -587,7 +600,7 @@ test('should reject on 401 without auth', async (t) => {
         {
           uri: 'http://json11.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -609,7 +622,7 @@ test('should reject on 403 ', async (t) => {
         {
           uri: 'http://json12.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -639,7 +652,7 @@ test('should send with headers from endpoint', async (t) => {
           headers: { 'If-Match': '3-871801934' },
           uri: 'http://json13.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -665,7 +678,7 @@ test('should support custom timeout in milliseconds', async (t) => {
           uri: 'http://json27.test/entries/ent1',
           timeout: 1, // Set a very low timeout for making sure it times out
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -692,7 +705,7 @@ test('should send with auth headers', async (t) => {
         {
           uri: 'http://json14.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -720,7 +733,7 @@ test('should not send with auth headers when authInData is true', async (t) => {
           uri: 'http://json28.test/entries/ent1',
           authInData: true,
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -742,7 +755,7 @@ test('should retrieve with headers from action', async (t) => {
   })
     .put(
       '/entries/ent1',
-      '<?xml version="1.0" encoding="utf-8"?><soap:Envelope></soap:Envelope>'
+      '<?xml version="1.0" encoding="utf-8"?><soap:Envelope></soap:Envelope>',
     )
     .reply(200)
   const action = {
@@ -761,7 +774,7 @@ test('should retrieve with headers from action', async (t) => {
           headers: { 'If-Match': '3-871801934' },
           uri: 'http://json15.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -794,7 +807,7 @@ test('should remove content-type header in GET requests', async (t) => {
         {
           uri: 'http://json24.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: null,
     },
@@ -824,7 +837,7 @@ test('should retrieve with auth params in querystring', async (t) => {
           authAsQuery: true,
           queryParams: { order: 'desc' },
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'Th@&t0k3n', timestamp: '1554407539' },
     },
@@ -833,6 +846,58 @@ test('should retrieve with auth params in querystring', async (t) => {
   const ret = await send(action, null)
 
   t.is(ret.status, 'ok', ret.error)
+})
+
+test('should throttle calls when options has throttle settings', async (t) => {
+  const scope = nock('http://json29.test')
+    .get('/entries/ent1')
+    .times(4)
+    .reply(200, () => ({ id: 'ent1', timestamp: Date.now() }))
+  const options = prepareOptions(
+    {
+      uri: 'http://json29.test/entries/ent1',
+      throttle: {
+        limit: 2,
+        interval: 1000,
+      },
+    },
+    serviceId,
+  )
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', id: 'ent1' },
+    meta: {
+      options,
+    },
+  }
+
+  const conn = await connect(options, null, null) // We need to connect to get the throttle function
+  const ret0 = await send(action, conn)
+  const ret1 = await send(action, conn)
+  const ret2 = await send(action, conn)
+  const ret3 = await send(action, conn)
+
+  t.is(ret0.status, 'ok', ret0.error)
+  t.is(ret1.status, 'ok', ret1.error)
+  t.is(ret2.status, 'ok', ret2.error)
+  t.is(ret3.status, 'ok', ret3.error)
+  const timestamp0 = extractTimestamp(ret0.data)
+  const timestamp1 = extractTimestamp(ret1.data)
+  const timestamp2 = extractTimestamp(ret2.data)
+  const timestamp3 = extractTimestamp(ret3.data)
+  t.true(
+    timestamp1 - timestamp0 < 1000,
+    'Should have less than 1000 ms between the first and second call',
+  )
+  t.true(
+    timestamp2 - timestamp0 > 900 && timestamp2 - timestamp0 < 1100, // We give the throttle function a slack of 100 ms in both directions
+    `Should have around 1000 ms between the first and third call, was ${timestamp2 - timestamp0}`,
+  )
+  t.true(
+    timestamp3 - timestamp2 < 1000,
+    'Should have less than 1000 ms between the third and fourth call',
+  )
+  t.true(scope.isDone())
 })
 
 test('should return error when no endpoint', async (t) => {

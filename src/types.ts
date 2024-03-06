@@ -27,6 +27,10 @@ export interface ServiceOptions extends Record<string, unknown> {
   timeout?: number
   authAsQuery?: boolean
   authInData?: boolean
+  throttle?: {
+    limit: number
+    interval: number
+  }
 }
 
 export interface HandlerCase {
@@ -49,4 +53,5 @@ export interface Connection extends Record<string, unknown> {
   server?: http.Server
   incoming?: ConnectionIncomingOptions
   handlerCases?: Map<ConnectionIncomingOptions, HandlerCase>
+  waitFn?: () => Promise<void>
 }
