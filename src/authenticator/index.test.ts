@@ -10,12 +10,14 @@ const action = {
   meta: { ident: { id: 'johnf' } },
 }
 
+const dispatch = async () => ({ status: 'ok' })
+
 // Tests -- authenticate
 
 test('authenticate should always refuse for now', async (t) => {
   const options = {}
 
-  const ret = await authenticator.authenticate(options, action)
+  const ret = await authenticator.authenticate(options, action, dispatch)
 
   t.is(ret.status, 'refused')
   t.is(ret.error, 'Not implemented')
@@ -76,7 +78,12 @@ test('validate should return ident when Authorization matches options', async (t
   }
   const expected = { status: 'ok', access: { ident: { id: 'johnf' } } }
 
-  const ret = await authenticator.validate!(authentication, options, action)
+  const ret = await authenticator.validate!(
+    authentication,
+    options,
+    action,
+    dispatch,
+  )
 
   t.deepEqual(ret, expected)
 })
@@ -98,7 +105,12 @@ test('validate should return autherror when Authorization does not match options
     reason: 'invalidauth',
   }
 
-  const ret = await authenticator.validate!(authentication, options, action)
+  const ret = await authenticator.validate!(
+    authentication,
+    options,
+    action,
+    dispatch,
+  )
 
   t.deepEqual(ret, expected)
 })
@@ -120,7 +132,12 @@ test('validate should return autherror when Authorization does not match type', 
     reason: 'invalidauth',
   }
 
-  const ret = await authenticator.validate!(authentication, options, action)
+  const ret = await authenticator.validate!(
+    authentication,
+    options,
+    action,
+    dispatch,
+  )
 
   t.deepEqual(ret, expected)
 })
@@ -142,7 +159,12 @@ test('validate should return noaccess when Authorization is missing', async (t) 
     reason: 'noauth',
   }
 
-  const ret = await authenticator.validate!(authentication, options, action)
+  const ret = await authenticator.validate!(
+    authentication,
+    options,
+    action,
+    dispatch,
+  )
 
   t.deepEqual(ret, expected)
 })
@@ -157,7 +179,12 @@ test('validate should return noaccess when no action', async (t) => {
     reason: 'noauth',
   }
 
-  const ret = await authenticator.validate!(authentication, options, action)
+  const ret = await authenticator.validate!(
+    authentication,
+    options,
+    action,
+    dispatch,
+  )
 
   t.deepEqual(ret, expected)
 })
