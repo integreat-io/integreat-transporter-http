@@ -637,8 +637,8 @@ test('should send with headers from endpoint', async (t) => {
   nock('http://json13.test', {
     reqheaders: {
       authorization: 'The_token',
-      'If-Match': '3-871801934',
-      'user-agent': 'integreat-transporter-http/1.1',
+      'if-match': '3-871801934',
+      'user-agent': 'integreat-transporter-http/1.4',
     },
   })
     .put('/entries/ent1', '{}')
