@@ -87,7 +87,25 @@ test('should close server when the last listener is stopped', async (t) => {
   server.close()
 })
 
-test('should return badrequest when no conection', async (t) => {
+test('should close server when no handlers', async (t) => {
+  const server = http.createServer()
+  const closeSpy = sinon.spy(server, 'close')
+  const connection: Connection = {
+    status: 'ok',
+    server,
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9041 },
+    // No `handlerCases`
+  }
+
+  const ret = await stopListening(connection)
+
+  t.is(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
+  t.deepEqual(ret, { status: 'ok' })
+
+  server.close()
+})
+
+test('should return badrequest when no connection', async (t) => {
   const connection = null
   const expectedResponse = { status: 'badrequest', error: 'No connection' }
 

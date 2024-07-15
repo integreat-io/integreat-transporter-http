@@ -15,9 +15,15 @@ export default async function stopListening(
     }
   }
   if (!handlerCases) {
-    return {
-      status: 'noaction',
-      warning: 'No incoming handler cases found on connection',
+    // Close server when last handler case is removed
+    if (server) {
+      server.close()
+      return { status: 'ok' }
+    } else {
+      return {
+        status: 'noaction',
+        warning: 'No incoming handler cases found on connection',
+      }
     }
   }
 
