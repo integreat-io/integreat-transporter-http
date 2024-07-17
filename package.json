@@ -42,9 +42,9 @@
     "query-string": "^9.0.0"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^6.0.3",
+    "@integreat/ts-dev-setup": "^6.0.4",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.14.10",
+    "@types/node": "^20.14.11",
     "@types/sinon": "^17.0.3",
     "integreat": "^1.6.0-rc.15",
     "nock": "^13.5.4",
