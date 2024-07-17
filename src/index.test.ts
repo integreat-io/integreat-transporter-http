@@ -1,4 +1,5 @@
-import test from 'ava'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 
 import transporter from './index.js'
 
@@ -9,37 +10,37 @@ const serviceId = 'http'
 
 // Tests
 
-test('should be a transporter', (t) => {
-  t.is(typeof transporter.authentication, 'string')
-  t.is(typeof transporter.prepareOptions, 'function')
-  t.is(typeof transporter.connect, 'function')
-  t.is(typeof transporter.send, 'function')
-  t.is(typeof transporter.listen, 'function')
-  t.is(typeof transporter.stopListening, 'function')
-  t.is(typeof transporter.disconnect, 'function')
+test('should be a transporter', () => {
+  assert.equal(typeof transporter.authentication, 'string')
+  assert.equal(typeof transporter.prepareOptions, 'function')
+  assert.equal(typeof transporter.connect, 'function')
+  assert.equal(typeof transporter.send, 'function')
+  assert.equal(typeof transporter.listen, 'function')
+  assert.equal(typeof transporter.stopListening, 'function')
+  assert.equal(typeof transporter.disconnect, 'function')
 })
 
-test('should have authentication string', (t) => {
-  t.is(transporter.authentication, 'asHttpHeaders')
+test('should have authentication string', () => {
+  assert.equal(transporter.authentication, 'asHttpHeaders')
 })
 
-test('connect should return connection object', async (t) => {
+test('connect should return connection object', async () => {
   const connection = { status: 'ok' }
 
   const ret = await transporter.connect({}, {}, connection, emit)
 
-  t.deepEqual(ret, connection)
+  assert.deepEqual(ret, connection)
 })
 
-test('should do nothing when callling disconnect', async (t) => {
+test('should do nothing when callling disconnect', async () => {
   const ret = await transporter.disconnect(null)
 
-  t.is(ret, undefined)
+  assert.equal(ret, undefined)
 })
 
 // Tests -- prepareOptions
 
-test('should return options object', (t) => {
+test('should return options object', () => {
   const options = {
     uri: 'http://example.com/',
     headers: {
@@ -51,12 +52,12 @@ test('should return options object', (t) => {
 
   const ret = transporter.prepareOptions(options, serviceId)
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
 // Tests -- shouldListen
 
-test('should return true when incoming is set in options', (t) => {
+test('should return true when incoming is set in options', () => {
   const options = {
     uri: 'http://foreign.api',
     incoming: {
@@ -68,15 +69,15 @@ test('should return true when incoming is set in options', (t) => {
 
   const ret = transporter.shouldListen!(options)
 
-  t.true(ret)
+  assert.equal(ret, true)
 })
 
-test('should return false when incoming is not set in options', (t) => {
+test('should return false when incoming is not set in options', () => {
   const options = {
     uri: 'http://foreign.api',
   }
 
   const ret = transporter.shouldListen!(options)
 
-  t.false(ret)
+  assert.equal(ret, false)
 })

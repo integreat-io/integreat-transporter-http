@@ -1,4 +1,5 @@
-import test from 'ava'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 
 import authenticator from './index.js'
 
@@ -14,18 +15,18 @@ const dispatch = async () => ({ status: 'ok' })
 
 // Tests -- authenticate
 
-test('authenticate should always refuse for now', async (t) => {
+test('authenticate should always refuse for now', async () => {
   const options = {}
 
   const ret = await authenticator.authenticate(options, action, dispatch)
 
-  t.is(ret.status, 'refused')
-  t.is(ret.error, 'Not implemented')
+  assert.equal(ret.status, 'refused')
+  assert.equal(ret.error, 'Not implemented')
 })
 
 // Tests -- isAuthenticated
 
-test('isAuthenticated should always return false for now', (t) => {
+test('isAuthenticated should always return false for now', () => {
   const authentication = {
     status: 'granted',
   }
@@ -38,34 +39,34 @@ test('isAuthenticated should always return false for now', (t) => {
 
   const ret = authenticator.isAuthenticated(authentication, options, action)
 
-  t.false(ret)
+  assert.equal(ret, false)
 })
 
 // Tests -- asObject
 
-test('asObject should always return empty object for now', (t) => {
+test('asObject should always return empty object for now', () => {
   const authentication = { status: 'granted' }
   const expected = {}
 
   const ret = authenticator.authentication.asObject(authentication)
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
 // Tests -- asHttpHeaders
 
-test('asHttpHeaders should always return empty object for now', (t) => {
+test('asHttpHeaders should always return empty object for now', () => {
   const authentication = { status: 'granted' }
   const expected = {}
 
   const ret = authenticator.authentication.asHttpHeaders(authentication)
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
 // Tests -- validate
 
-test('validate should return ident when Authorization matches options', async (t) => {
+test('validate should return ident when Authorization matches options', async () => {
   const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
@@ -85,10 +86,10 @@ test('validate should return ident when Authorization matches options', async (t
     dispatch,
   )
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
-test('validate should return autherror when Authorization does not match options', async (t) => {
+test('validate should return autherror when Authorization does not match options', async () => {
   const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
@@ -112,10 +113,10 @@ test('validate should return autherror when Authorization does not match options
     dispatch,
   )
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
-test('validate should return autherror when Authorization does not match type', async (t) => {
+test('validate should return autherror when Authorization does not match type', async () => {
   const options = { type: 'Unknown', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
@@ -139,10 +140,10 @@ test('validate should return autherror when Authorization does not match type', 
     dispatch,
   )
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
-test('validate should return noaccess when Authorization is missing', async (t) => {
+test('validate should return noaccess when Authorization is missing', async () => {
   const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
@@ -166,10 +167,10 @@ test('validate should return noaccess when Authorization is missing', async (t) 
     dispatch,
   )
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })
 
-test('validate should return noaccess when no action', async (t) => {
+test('validate should return noaccess when no action', async () => {
   const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = null
@@ -186,5 +187,5 @@ test('validate should return noaccess when no action', async (t) => {
     dispatch,
   )
 
-  t.deepEqual(ret, expected)
+  assert.deepEqual(ret, expected)
 })

@@ -1,11 +1,12 @@
-import test from 'ava'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 import type { IncomingMessage } from 'http'
 
 import { actionFromRequest } from './request.js'
 
 // Tests
 
-test('should lowercase host when creating action from request', async (t) => {
+test('should lowercase host when creating action from request', async () => {
   const request = {
     method: 'GET',
     url: '/ENTRIES?filter=all&format=json',
@@ -43,10 +44,10 @@ test('should lowercase host when creating action from request', async (t) => {
 
   const ret = await actionFromRequest(request, 9030)
 
-  t.deepEqual(ret, expectedAction)
+  assert.deepEqual(ret, expectedAction)
 })
 
-test('should treat query params ending in brackets as an array', async (t) => {
+test('should treat query params ending in brackets as an array', async () => {
   const request = {
     method: 'GET',
     url: '/entries?ids[]=ent1&ids[]=ent2&archived=true&pageSize=100',
@@ -85,5 +86,5 @@ test('should treat query params ending in brackets as an array', async (t) => {
 
   const ret = await actionFromRequest(request, 9030)
 
-  t.deepEqual(ret, expectedAction)
+  assert.deepEqual(ret, expectedAction)
 })

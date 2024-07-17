@@ -1,4 +1,5 @@
-import test from 'ava'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 import sinon from 'sinon'
 import http from 'http'
 import got from 'got'
@@ -23,7 +24,7 @@ const options = {
 
 // Tests
 
-test('should stop listening', async (t) => {
+test('should stop listening', async () => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
@@ -46,17 +47,17 @@ test('should stop listening', async (t) => {
   const stopRet = await stopListening(connection0)
   const response = await got(url, options)
 
-  t.is(response.statusCode, 404, response.body) // We get 404 as we're not listening anymore
-  t.deepEqual(stopRet, { status: 'ok' })
-  t.deepEqual(startRet0, { status: 'ok' })
-  t.deepEqual(startRet1, { status: 'ok' })
-  t.is(closeSpy.callCount, 0) // Don't close connection, as we have two listeners
-  t.is(dispatch.callCount, 0) // No dispatching, as we stopped listening before request
+  assert.equal(response.statusCode, 404, response.body) // We get 404 as we're not listening anymore
+  assert.deepEqual(stopRet, { status: 'ok' })
+  assert.deepEqual(startRet0, { status: 'ok' })
+  assert.deepEqual(startRet1, { status: 'ok' })
+  assert.equal(closeSpy.callCount, 0) // Don't close connection, as we have two listeners
+  assert.equal(dispatch.callCount, 0) // No dispatching, as we stopped listening before request
 
   server.close()
 })
 
-test('should close server when the last listener is stopped', async (t) => {
+test('should close server when the last listener is stopped', async () => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
@@ -78,16 +79,16 @@ test('should close server when the last listener is stopped', async (t) => {
   const stopRet0 = await stopListening(connection0)
   const stopRet1 = await stopListening(connection1)
 
-  t.is(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
-  t.deepEqual(stopRet0, { status: 'ok' })
-  t.deepEqual(stopRet1, { status: 'ok' })
-  t.deepEqual(startRet0, { status: 'ok' })
-  t.deepEqual(startRet1, { status: 'ok' })
+  assert.equal(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
+  assert.deepEqual(stopRet0, { status: 'ok' })
+  assert.deepEqual(stopRet1, { status: 'ok' })
+  assert.deepEqual(startRet0, { status: 'ok' })
+  assert.deepEqual(startRet1, { status: 'ok' })
 
   server.close()
 })
 
-test('should close server when no handlers', async (t) => {
+test('should close server when no handlers', async () => {
   const server = http.createServer()
   const closeSpy = sinon.spy(server, 'close')
   const connection: Connection = {
@@ -99,22 +100,22 @@ test('should close server when no handlers', async (t) => {
 
   const ret = await stopListening(connection)
 
-  t.is(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
-  t.deepEqual(ret, { status: 'ok' })
+  assert.equal(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
+  assert.deepEqual(ret, { status: 'ok' })
 
   server.close()
 })
 
-test('should return badrequest when no connection', async (t) => {
+test('should return badrequest when no connection', async () => {
   const connection = null
   const expectedResponse = { status: 'badrequest', error: 'No connection' }
 
   const ret = await stopListening(connection)
 
-  t.deepEqual(ret, expectedResponse)
+  assert.deepEqual(ret, expectedResponse)
 })
 
-test('should return noaction when connection has no handler cases map', async (t) => {
+test('should return noaction when connection has no handler cases map', async () => {
   const connection: Connection = {
     status: 'ok',
     // We don't need a server for this test
@@ -128,10 +129,10 @@ test('should return noaction when connection has no handler cases map', async (t
 
   const ret = await stopListening(connection)
 
-  t.deepEqual(ret, expectedResponse)
+  assert.deepEqual(ret, expectedResponse)
 })
 
-test('should return noaction when connection has no incoming options', async (t) => {
+test('should return noaction when connection has no incoming options', async () => {
   const connection: Connection = {
     status: 'ok',
     // We don't need a server for this test
@@ -145,5 +146,5 @@ test('should return noaction when connection has no incoming options', async (t)
 
   const ret = await stopListening(connection)
 
-  t.deepEqual(ret, expectedResponse)
+  assert.deepEqual(ret, expectedResponse)
 })

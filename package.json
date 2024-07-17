@@ -23,10 +23,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "npm run build && c8 --reporter=text-summary ava --config ./ava-dist.config.cjs",
+    "test": "node --import tsx --no-deprecation --test --enable-source-maps --experimental-test-coverage --test-reporter node-test-reporter 'src/**/*.test.ts'",
+    "test:legacy": "node --import tsx --no-deprecation --test --enable-source-maps src/*.test.ts src/**/*.test.ts",
     "test:inspect": "node --inspect node_modules/ava/profile.js",
     "test:watch": "npm run dev",
-    "dev": "ava --watch",
+    "dev": "node --import tsx --no-deprecation --test --enable-source-maps --test-reporter node-test-reporter --watch 'src/**/*.test.ts' || exit 0",
     "build": "tsc",
     "coverage": "c8 report",
     "lint": "eslint --ext .ts src",
@@ -42,7 +43,7 @@
     "query-string": "^9.0.0"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^6.0.4",
+    "@integreat/ts-dev-setup": "^7.0.1",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.14.11",
     "@types/sinon": "^17.0.3",
