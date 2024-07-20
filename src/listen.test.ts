@@ -255,6 +255,81 @@ test('should dispatch OPTIONS request as GET action', async () => {
   connection.server.close()
 })
 
+test('should match the most specific path before a less specific', async (t) => {
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon
+    .stub()
+    .resolves({ status: 'ok', access: { ident: { id: 'userFromIntegreat' } } })
+  const server = http.createServer()
+  t.after(() => {
+    server.close()
+  })
+  const connection0 = {
+    status: 'ok',
+    server,
+    incoming: {
+      host: ['localhost'],
+      path: ['/'],
+      port: 9002,
+      sourceService: 'mainApi',
+    },
+  }
+  const connection1 = {
+    status: 'ok',
+    server,
+    incoming: {
+      host: ['localhost'],
+      path: ['/entries'],
+      port: 9002,
+      sourceService: 'mainApi',
+    },
+  }
+  const url = 'http://localhost:9002/entries?filter=all&format=json'
+  const expectedRawAction = {
+    type: 'GET',
+    payload: {
+      method: 'GET',
+      hostname: 'localhost',
+      port: 9002,
+      path: '/entries',
+      queryParams: {
+        filter: 'all',
+        format: 'json',
+      },
+      contentType: 'application/json',
+      headers: {
+        'content-type': 'application/json',
+        host: 'localhost:9002',
+      },
+    },
+    meta: {},
+  }
+  const expectedAction = {
+    ...expectedRawAction,
+    payload: {
+      ...expectedRawAction.payload,
+      sourceService: 'mainApi',
+    },
+    meta: { ident: { id: 'userFromIntegreat' } },
+  }
+
+  const ret0 = await listen(dispatch, connection0, authenticate)
+  const ret1 = await listen(dispatch, connection1, authenticate)
+  const response = await got(url, options)
+
+  assert.deepEqual(ret0, { status: 'ok' })
+  assert.deepEqual(ret1, { status: 'ok' })
+  assert.equal(dispatch.callCount, 1, `Dispatched ${dispatch.callCount} times`)
+  assert.deepEqual(
+    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
+    expectedAction,
+  )
+  assert.equal(response.statusCode, 200)
+  assert.equal(response.headers['content-type'], 'application/json')
+  assert.equal(response.body, responseData)
+})
+
 test('should lowercase host and path in dispatched action', async () => {
   // Note: This test does not really check that we lowercast the host and path,
   // as Got will do it for us anyway. See next test for the real verification.

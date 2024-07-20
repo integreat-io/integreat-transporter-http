@@ -33,31 +33,33 @@ const matchesHostname = (hostname: unknown, patterns: string[]) =>
   patterns.length === 0 ||
   (typeof hostname === 'string' && patterns.includes(hostname))
 
+const matchPattern = (path: string) =>
+  function matchPattern(score: number, pattern: string) {
+    const isMatch =
+      path.startsWith(pattern) &&
+      (path.length === pattern.length ||
+        ['/', '?', '#'].includes(pattern[path.length]))
+    return isMatch && pattern.length > score ? pattern.length : score
+  }
+
 function matchesPath(path: unknown, patterns: string[]) {
   if (patterns.length === 0 || patterns.includes('/')) {
     // We don't need any further checks if the pattern is empty or contains '/'
-    return true
+    return 1 // The smallest match score
   }
 
-  const lowerCasePath =
-    typeof path === 'string' ? path.toLowerCase() : undefined
-  return (
-    lowerCasePath &&
-    patterns.some(
-      (pattern) =>
-        lowerCasePath.startsWith(pattern) &&
-        (lowerCasePath.length === pattern.length ||
-          ['/', '?', '#'].includes(pattern[lowerCasePath.length])),
-    )
-  )
+  return typeof path === 'string'
+    ? patterns.reduce(matchPattern(path.toLowerCase()), 0)
+    : 0
 }
 
 const actionMatchesOptions = (
   action: Action,
   options: ConnectionIncomingOptions,
 ) =>
-  matchesHostname(action.payload.hostname, options.host) &&
-  matchesPath(action.payload.path, options.path)
+  matchesHostname(action.payload.hostname, options.host)
+    ? matchesPath(action.payload.path, options.path)
+    : 0
 
 const lowerCaseActionPath = (action: Action): Action => ({
   ...action,
@@ -143,16 +145,27 @@ function getHeadersAndSetAuthHeaders(
 const setResponseIfAuthError = (action: Action, response: Response) =>
   response.status !== 'ok' ? { ...action, response } : action
 
+function sortMatches([a]: [number, HandlerCase], [b]: [number, HandlerCase]) {
+  return a - b
+}
+
 function findMatchingHandlerCase(
   handlerCases: Map<ConnectionIncomingOptions, HandlerCase>,
   action: Action,
 ): HandlerCase | undefined {
+  const matched: [number, HandlerCase][] = []
   for (const handleCase of handlerCases.values()) {
-    if (actionMatchesOptions(action, handleCase.options)) {
-      return handleCase
+    const score = actionMatchesOptions(action, handleCase.options)
+    if (score > 0) {
+      matched.push([score, handleCase])
     }
   }
-  return undefined
+  if (matched.length > 0) {
+    // All matches return a score, we want the match with the highest score
+    return matched.sort(sortMatches)[0][1] // Return the second part of the tupple (i.e. the handleCase) on the best score
+  } else {
+    return undefined
+  }
 }
 
 async function authAndPrepareAction(
