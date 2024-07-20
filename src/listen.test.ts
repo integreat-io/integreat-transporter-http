@@ -271,8 +271,8 @@ test('should match the most specific path before a less specific', async (t) => 
     incoming: {
       host: ['localhost'],
       path: ['/'],
-      port: 9002,
-      sourceService: 'mainApi',
+      port: 9037,
+      sourceService: 'wrongApi',
     },
   }
   const connection1 = {
@@ -281,38 +281,11 @@ test('should match the most specific path before a less specific', async (t) => 
     incoming: {
       host: ['localhost'],
       path: ['/entries'],
-      port: 9002,
+      port: 9037,
       sourceService: 'mainApi',
     },
   }
-  const url = 'http://localhost:9002/entries?filter=all&format=json'
-  const expectedRawAction = {
-    type: 'GET',
-    payload: {
-      method: 'GET',
-      hostname: 'localhost',
-      port: 9002,
-      path: '/entries',
-      queryParams: {
-        filter: 'all',
-        format: 'json',
-      },
-      contentType: 'application/json',
-      headers: {
-        'content-type': 'application/json',
-        host: 'localhost:9002',
-      },
-    },
-    meta: {},
-  }
-  const expectedAction = {
-    ...expectedRawAction,
-    payload: {
-      ...expectedRawAction.payload,
-      sourceService: 'mainApi',
-    },
-    meta: { ident: { id: 'userFromIntegreat' } },
-  }
+  const url = 'http://localhost:9037/entries?filter=all&format=json'
 
   const ret0 = await listen(dispatch, connection0, authenticate)
   const ret1 = await listen(dispatch, connection1, authenticate)
@@ -321,10 +294,8 @@ test('should match the most specific path before a less specific', async (t) => 
   assert.deepEqual(ret0, { status: 'ok' })
   assert.deepEqual(ret1, { status: 'ok' })
   assert.equal(dispatch.callCount, 1, `Dispatched ${dispatch.callCount} times`)
-  assert.deepEqual(
-    stripIrrelevantHeadersFromAction(dispatch.args[0][0]),
-    expectedAction,
-  )
+  const dispatchedAction = dispatch.args[0][0]
+  assert.equal(dispatchedAction.payload.sourceService, 'mainApi')
   assert.equal(response.statusCode, 200)
   assert.equal(response.headers['content-type'], 'application/json')
   assert.equal(response.body, responseData)

@@ -146,7 +146,7 @@ const setResponseIfAuthError = (action: Action, response: Response) =>
   response.status !== 'ok' ? { ...action, response } : action
 
 function sortMatches([a]: [number, HandlerCase], [b]: [number, HandlerCase]) {
-  return a - b
+  return b - a
 }
 
 function findMatchingHandlerCase(
