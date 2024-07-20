@@ -1,6 +1,6 @@
 {
   "name": "integreat-transporter-http",
-  "version": "1.4.0-rc.5",
+  "version": "1.4.0-rc.6",
   "description": "HTTP transporter for Integreat",
   "keywords": [
     "integreat",
@@ -29,6 +29,7 @@
     "test:watch": "npm run dev",
     "dev": "node --import tsx --no-deprecation --test --enable-source-maps --test-reporter node-test-reporter --watch 'src/**/*.test.ts' || exit 0",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "coverage": "c8 report",
     "lint": "eslint --ext .ts src",
     "verify": "npm run lint && npm test"
