@@ -24,11 +24,14 @@ const options = {
 
 // Tests
 
-test('should stop listening', async () => {
+test('should stop listening', async (t) => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
   const server = http.createServer()
+  t.after(() => {
+    server.close()
+  })
   const closeSpy = sinon.spy(server, 'close')
   const connection0: Connection = {
     status: 'ok',
@@ -44,88 +47,84 @@ test('should stop listening', async () => {
 
   const startRet0 = await listen(dispatch, connection0, authenticate)
   const startRet1 = await listen(dispatch, connection1, authenticate)
-  const stopRet = await stopListening(connection0)
-  const response = await got(url, options)
-
-  assert.equal(response.statusCode, 404, response.body) // We get 404 as we're not listening anymore
-  assert.deepEqual(stopRet, { status: 'ok' })
-  assert.deepEqual(startRet0, { status: 'ok' })
-  assert.deepEqual(startRet1, { status: 'ok' })
-  assert.equal(closeSpy.callCount, 0) // Don't close connection, as we have two listeners
-  assert.equal(dispatch.callCount, 0) // No dispatching, as we stopped listening before request
-
-  server.close()
-})
-
-test('should close server when the last listener is stopped', async () => {
-  const dispatch = sinon
-    .stub()
-    .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
-  const server = http.createServer()
-  const closeSpy = sinon.spy(server, 'close')
-  const connection0: Connection = {
-    status: 'ok',
-    server,
-    incoming: { host: ['localhost'], path: ['/entries'], port: 9041 },
-  }
-  const connection1: Connection = {
-    status: 'ok',
-    server,
-    incoming: { host: ['localhost'], path: ['/users'], port: 9041 },
-  }
-
-  const startRet0 = await listen(dispatch, connection0, authenticate)
-  const startRet1 = await listen(dispatch, connection1, authenticate)
   const stopRet0 = await stopListening(connection0)
+  const caseCount0 = connection1.handlerCases?.size
+  const response = await got(url, options)
   const stopRet1 = await stopListening(connection1)
+  const caseCount1 = connection1.handlerCases?.size
 
-  assert.equal(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
+  assert.equal(caseCount0, 1) // Was one case left after first stopListening()
+  assert.equal(caseCount1, 0) // No cases left after second stopListening()
+  assert.equal(response.statusCode, 404, response.body) // We get 404 as we're not listening anymore
   assert.deepEqual(stopRet0, { status: 'ok' })
   assert.deepEqual(stopRet1, { status: 'ok' })
   assert.deepEqual(startRet0, { status: 'ok' })
   assert.deepEqual(startRet1, { status: 'ok' })
-
-  server.close()
+  assert.equal(dispatch.callCount, 0) // No dispatching, as we stopped listening before request
+  assert.equal(closeSpy.callCount, 0) // We don't close the server here
 })
 
-test('should close server when no handlers', async () => {
+test('should stop listening and start again with new connection', async (t) => {
+  const dispatch = sinon
+    .stub()
+    .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
   const server = http.createServer()
-  const closeSpy = sinon.spy(server, 'close')
-  const connection: Connection = {
+  t.after(() => {
+    server.close()
+  })
+  const connection0: Connection = {
     status: 'ok',
     server,
-    incoming: { host: ['localhost'], path: ['/entries'], port: 9041 },
-    // No `handlerCases`
+    incoming: { host: ['localhost'], path: ['/changing'], port: 9041 },
   }
+  const connection1: Connection = {
+    status: 'ok',
+    server,
+    incoming: { host: ['localhost'], path: ['/changing'], port: 9041 },
+  }
+  const url = 'http://localhost:9041/changing'
 
-  const ret = await stopListening(connection)
+  const startRet0 = await listen(dispatch, connection0, authenticate)
+  const response0 = await got(url, options)
+  const stopRet0 = await stopListening(connection0)
+  const caseCount0 = connection0.handlerCases?.size
+  const response1 = await got(url, options)
+  const startRet1 = await listen(dispatch, connection1, authenticate)
+  const caseCount1 = connection1.handlerCases?.size
+  const response2 = await got(url, options)
+  const stopRet1 = await stopListening(connection1)
 
-  assert.equal(closeSpy.callCount, 1) // Should close connection, as we have stopped all listerens
-  assert.deepEqual(ret, { status: 'ok' })
-
-  server.close()
+  assert.equal(caseCount0, 0, `First case count was ${caseCount0}`)
+  assert.equal(caseCount1, 1, `Second case count was ${caseCount1}`)
+  assert.equal(
+    response0.statusCode,
+    200,
+    `Should respond with 200, responded with ${response0.statusCode} ${response0.body}`,
+  )
+  assert.equal(
+    response1.statusCode,
+    404,
+    `Should respond with 404, responded with ${response1.statusCode} ${response1.body}`,
+  )
+  assert.equal(
+    response2.statusCode,
+    200,
+    `Should respond with 200, responded with ${response2.statusCode} ${response2.body}`,
+  )
+  assert.deepEqual(stopRet0, { status: 'ok' })
+  assert.deepEqual(stopRet1, { status: 'ok' })
+  assert.deepEqual(startRet0, { status: 'ok' })
+  assert.deepEqual(startRet1, { status: 'ok' })
+  assert.equal(
+    dispatch.callCount,
+    2,
+    `Called dispatch() ${dispatch.callCount} times`,
+  )
 })
 
 test('should return badrequest when no connection', async () => {
   const connection = null
   const expectedResponse = { status: 'badrequest', error: 'No connection' }
-
-  const ret = await stopListening(connection)
-
-  assert.deepEqual(ret, expectedResponse)
-})
-
-test('should return noaction when connection has no handler cases map', async () => {
-  const connection: Connection = {
-    status: 'ok',
-    // We don't need a server for this test
-    incoming: { host: ['localhost'], path: ['/entries'], port: 9040 },
-    // No handlerCases
-  }
-  const expectedResponse = {
-    status: 'noaction',
-    warning: 'No incoming handler cases found on connection',
-  }
 
   const ret = await stopListening(connection)
 

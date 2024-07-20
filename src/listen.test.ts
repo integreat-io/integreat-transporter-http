@@ -1082,13 +1082,17 @@ test('should dispatch to matching service', async () => {
   server.close()
 })
 
-test('should keep port setups seperate', async () => {
+test('should keep port setups seperate', async (t) => {
   const responseData0 = JSON.stringify([{ id: 'ent1' }])
   const responseData1 = JSON.stringify([{ id: 'ent2' }])
   const dispatch0 = sinon.stub().resolves({ status: 'ok', data: responseData0 })
   const dispatch1 = sinon.stub().resolves({ status: 'ok', data: responseData1 })
   const server0 = http.createServer()
   const server1 = http.createServer()
+  t.after(() => {
+    server0.close()
+    server1.close()
+  })
   const connection0 = {
     status: 'ok',
     server: server0,
@@ -1102,7 +1106,9 @@ test('should keep port setups seperate', async () => {
   const url = 'http://localhost:9021/entries'
 
   const ret0 = await listen(dispatch0, connection0, authenticate)
+  assert.equal(server0.listening, true)
   const ret1 = await listen(dispatch1, connection1, authenticate)
+  assert.equal(server1.listening, true)
   const response = await got(url, options)
 
   assert.deepEqual(ret0, { status: 'ok' })
@@ -1112,12 +1118,9 @@ test('should keep port setups seperate', async () => {
   assert.equal(response.statusCode, 200)
   assert.equal(response.headers['content-type'], 'application/json')
   assert.equal(response.body, responseData1)
-
-  server0.close()
-  server1.close()
 })
 
-test('should return error from server.listen()', async () => {
+test('should return error from server.listen()', async (t) => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
@@ -1126,6 +1129,9 @@ test('should return error from server.listen()', async () => {
     server: http.createServer(),
     incoming: { host: ['localhost'], path: ['/entries'], port: 9022 },
   }
+  t.after(() => {
+    connection.server.close()
+  })
   sinon
     .stub(connection.server, 'listen')
     .throws(new Error('Something went terribly wrong'))
@@ -1138,11 +1144,9 @@ test('should return error from server.listen()', async () => {
       'Cannot listen to server on port 9022. Error: Something went terribly wrong',
   })
   assert.equal(dispatch.callCount, 0)
-
-  connection.server.close()
 })
 
-test('should return error when server fails', async () => {
+test('should return error when server fails', async (t) => {
   const dispatch = sinon
     .stub()
     .resolves({ status: 'ok', data: JSON.stringify([{ id: 'ent1' }]) })
@@ -1152,6 +1156,10 @@ test('should return error when server fails', async () => {
     incoming: { host: ['localhost'], path: ['/entries'], port: 9023 },
   }
   const otherServer = http.createServer()
+  t.after(() => {
+    otherServer.close()
+    connection.server.close()
+  })
 
   otherServer.listen(9023)
   const ret = await listen(dispatch, connection, authenticate)
@@ -1162,9 +1170,6 @@ test('should return error when server fails', async () => {
       'Cannot listen to server on port 9023. Error: listen EADDRINUSE: address already in use :::9023',
   })
   assert.equal(dispatch.callCount, 0) // No dispatching without requests
-
-  otherServer.close()
-  connection.server.close()
 })
 
 test('should return with status badrequest when incoming has no port', async () => {

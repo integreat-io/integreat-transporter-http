@@ -7,7 +7,7 @@ export default async function stopListening(
   if (!connection) {
     return { status: 'badrequest', error: 'No connection' }
   }
-  const { incoming, handlerCases, server } = connection
+  const { incoming, handlerCases } = connection
   if (!incoming) {
     return {
       status: 'noaction',
@@ -15,22 +15,12 @@ export default async function stopListening(
     }
   }
   if (!handlerCases) {
-    // Close server when last handler case is removed
-    if (server) {
-      server.close()
-      return { status: 'ok' }
-    } else {
-      return {
-        status: 'noaction',
-        warning: 'No incoming handler cases found on connection',
-      }
+    return {
+      status: 'noaction',
+      warning: 'No incoming handler cases found on connection',
     }
   }
 
   handlerCases.delete(incoming)
-  if (server && handlerCases.size === 0) {
-    // Close server when last handler case is removed
-    server.close()
-  }
   return { status: 'ok' }
 }

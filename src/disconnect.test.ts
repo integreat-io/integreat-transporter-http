@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import sinon from 'sinon'
 import http from 'http'
+import { spyCountMessage } from './tests/helpers/messages.js'
 import type {
   Connection,
   ConnectionIncomingOptions,
@@ -10,24 +11,37 @@ import type {
 
 import disconnect from './disconnect.js'
 
+// Setup
+
+const incomingOptions = {
+  host: ['localhost'],
+  path: ['/entries'],
+  port: 9001,
+}
+
+const fn = sinon.stub()
+
+const createHandlerCase = (
+  options: ConnectionIncomingOptions,
+): HandlerCase => ({
+  options,
+  dispatch: fn,
+  authenticate: fn,
+})
+
 // Tests
 
 test('should stop listening when we are listening', async () => {
-  const fn = sinon.stub()
   const closeFn = sinon.stub()
-  const server = { close: closeFn } as unknown as http.Server
-  const incomingOptions = {
-    host: ['localhost'],
-    path: ['/entries'],
-    port: 9001,
-  }
+  const removeAllListeners = sinon.stub()
+  const closeIdleConnections = sinon.stub()
+  const server = {
+    close: closeFn,
+    removeAllListeners,
+    closeIdleConnections,
+  } as unknown as http.Server
   const handlerCases = new Map<ConnectionIncomingOptions, HandlerCase>()
-  const handlerCase = {
-    options: incomingOptions,
-    dispatch: fn,
-    authenticate: fn,
-  }
-  handlerCases.set(incomingOptions, handlerCase)
+  handlerCases.set(incomingOptions, createHandlerCase(incomingOptions))
   const connection: Connection = {
     status: 'ok',
     server,
@@ -38,17 +52,90 @@ test('should stop listening when we are listening', async () => {
   await disconnect(connection)
 
   assert.equal(handlerCases.size, 0)
-  assert.equal(closeFn.callCount, 1)
+  assert.equal(
+    removeAllListeners.callCount,
+    1,
+    spyCountMessage(removeAllListeners, 'removeAllListeners'),
+  )
+  assert.equal(
+    closeIdleConnections.callCount,
+    1,
+    spyCountMessage(closeIdleConnections, 'closeIdleConnections'),
+  )
+  assert.equal(closeFn.callCount, 1, spyCountMessage(closeFn, 'close'))
 })
 
-test('should do nothing when we are not listening', async () => {
+test('should not close server when there are other handlers', async () => {
+  const removeAllListeners = sinon.stub()
   const closeFn = sinon.stub()
-  const server = { close: closeFn } as unknown as http.Server
-  const connection = { status: 'ok', server }
+  const closeIdleConnections = sinon.stub()
+  const server = {
+    close: closeFn,
+    closeIdleConnections,
+    removeAllListeners,
+  } as unknown as http.Server
+  const otherIncomingOptions = {
+    host: ['localhost'],
+    path: ['/other'],
+    port: 9001,
+  }
+  const handlerCases = new Map<ConnectionIncomingOptions, HandlerCase>()
+  handlerCases.set(incomingOptions, createHandlerCase(incomingOptions))
+  handlerCases.set(
+    otherIncomingOptions,
+    createHandlerCase(otherIncomingOptions),
+  )
+  const connection = {
+    status: 'ok',
+    server,
+    incoming: incomingOptions,
+    handlerCases,
+  }
 
   await disconnect(connection)
 
-  assert.equal(closeFn.callCount, 0)
+  assert.equal(handlerCases.size, 1, `We have ${handlerCases.size} handlers`)
+  assert.equal(
+    removeAllListeners.callCount,
+    0,
+    spyCountMessage(removeAllListeners, 'removeAllListeners'),
+  )
+  assert.equal(
+    closeIdleConnections.callCount,
+    0,
+    spyCountMessage(closeIdleConnections, 'closeIdleConnections'),
+  )
+  assert.equal(closeFn.callCount, 0, spyCountMessage(closeFn, 'close'))
+})
+
+test('should disconnect when we are not listening', async () => {
+  const removeAllListeners = sinon.stub()
+  const closeFn = sinon.stub()
+  const closeIdleConnections = sinon.stub()
+  const server = {
+    close: closeFn,
+    closeIdleConnections,
+    removeAllListeners,
+  } as unknown as http.Server
+  const connection = {
+    status: 'ok',
+    server,
+    // No incoming or handlerCases
+  }
+
+  await disconnect(connection)
+
+  assert.equal(
+    removeAllListeners.callCount,
+    1,
+    spyCountMessage(removeAllListeners, 'removeAllListeners'),
+  )
+  assert.equal(
+    closeIdleConnections.callCount,
+    1,
+    spyCountMessage(closeIdleConnections, 'closeIdleConnections'),
+  )
+  assert.equal(closeFn.callCount, 1, spyCountMessage(closeFn, 'close'))
 })
 
 test('should not fail when server is closed twice', async () => {

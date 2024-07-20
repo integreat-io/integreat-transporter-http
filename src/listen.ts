@@ -6,6 +6,7 @@ import {
   normalizeHeaders,
 } from './utils/response.js'
 import type http from 'http'
+import type { Server } from 'http'
 import type {
   Dispatch,
   Action,
@@ -88,18 +89,21 @@ const setIdentAndSourceService = (
 function respond(
   res: http.ServerResponse,
   statusCode: number,
-  responseDate?: string,
+  responseData?: string,
   responseHeaders?: Headers,
 ) {
   try {
-    res.writeHead(statusCode, {
-      'content-type': 'application/json',
-      ...normalizeHeaders(responseHeaders),
-    })
-    res.end(responseDate)
+    const headers = normalizeHeaders(responseHeaders)
+    res
+      .writeHead(statusCode, {
+        'content-type': 'application/json',
+        ...headers,
+      })
+      .end(responseData)
   } catch (error) {
-    res.writeHead(500)
-    res.end(JSON.stringify({ status: 'error', error: 'Internal server error' }))
+    res
+      .writeHead(500)
+      .end(JSON.stringify({ status: 'error', error: 'Internal server error' }))
   }
 }
 
@@ -199,11 +203,11 @@ const createHandler = (
 
     const incomingAction = await authAndPrepareAction(action, handleCase)
     const response = await dispatch(incomingAction)
-    const responseDate = dataFromResponse(response)
+    const responseData = dataFromResponse(response)
     const statusCode = statusCodeFromResponse(response)
     const headers = getHeadersAndSetAuthHeaders(response, options)
 
-    respond(res, statusCode, responseDate, headers)
+    respond(res, statusCode, responseData, headers)
   }
 
 function getErrorFromConnection(connection: Connection | null) {
@@ -235,32 +239,6 @@ function getErrorFromConnection(connection: Connection | null) {
   }
 }
 
-function waitOnError(server: http.Server, port: number) {
-  let error: Error | null = null
-
-  server.on('error', (e) => {
-    error = e
-  })
-
-  return (): Promise<Response> =>
-    new Promise((resolve, _reject) => {
-      setTimeout(() => {
-        if (error) {
-          debug(
-            `Server on port ${port} gave an error after it was started: ${error}`,
-          )
-          resolve({
-            status: 'error',
-            error: `Cannot listen to server on port ${port}. ${error}`,
-          })
-        } else {
-          debug(`No error from server on port ${port} after 200 ms`)
-          resolve({ status: 'ok' })
-        }
-      }, 200)
-    })
-}
-
 // Get the handler cases for the specified port. If there are no handler cases
 // for this port yet, we create and stores a map before returning it.
 function getHandlerCasesForPort(port: number) {
@@ -270,6 +248,27 @@ function getHandlerCasesForPort(port: number) {
     handlerCasesPerPort.set(port, handlerCases)
   }
   return handlerCases
+}
+
+function waitForListeningOrError(server: Server) {
+  return new Promise((resolve, reject) => {
+    // To clean up, we call removeListeners() in each handler, to remove
+    // our two listeners before we resolve or reject.
+    const listeningFn = () => {
+      removeListeners()
+      resolve(undefined)
+    }
+    const errorFn = (err: Error) => {
+      removeListeners()
+      reject(err)
+    }
+    const removeListeners = () => {
+      server.removeListener('listening', listeningFn)
+      server.removeListener('listening', errorFn)
+    }
+    server.on('listening', listeningFn)
+    server.on('error', errorFn)
+  })
 }
 
 export default async function listen(
@@ -288,23 +287,21 @@ export default async function listen(
 
   // Set up listener if this is the first service to listen on this port
   const handlerCases = getHandlerCasesForPort(incoming.port)
-  if (handlerCases.size === 0) {
-    debug(`Set up request handler for first service on port ${incoming.port}`)
-    server.on('request', createHandler(handlerCases, incoming.port))
-  }
 
-  // Add as a handler case to handler cases list
-  handlerCases.set(incoming, { options: incoming, dispatch, authenticate })
-  connection!.handlerCases = handlerCases // We know connection is set
-
-  // Start listening on port if we're not already listening
+  // Start listening on port if we're not already listening. There is one
+  // server per port, so we only need to check `server.listening` to know
+  // if it's already listening.
   if (!server.listening) {
-    debug(`Start listening to first service on port ${incoming.port}`)
-    const wait = waitOnError(server, incoming.port)
+    // Set up handler
+    debug(`Set up request handler for first service on port ${incoming.port}`)
+    const handler = createHandler(handlerCases, incoming.port)
+    server.on('request', handler)
 
     // Start listening
     try {
+      debug(`Start listening to first service on port ${incoming.port}`)
       server.listen(incoming.port)
+      await waitForListeningOrError(server)
       debug(`Listening on port ${incoming.port}`)
     } catch (error) {
       debug(`Cannot listen to server on port ${incoming.port}. ${error}`)
@@ -313,10 +310,11 @@ export default async function listen(
         error: `Cannot listen to server on port ${incoming.port}. ${error}`,
       }
     }
-
-    // The server has been started but give it a few ms to make sure it doesn't throw right away
-    return await wait()
   }
+
+  // Add as a handler case to handler cases list
+  handlerCases.set(incoming, { options: incoming, dispatch, authenticate })
+  connection!.handlerCases = handlerCases // We know connection is set
 
   return { status: 'ok' }
 }
