@@ -24,7 +24,7 @@ const httpTransporter: Transporter = {
 
   listen: listen(portHandlers),
 
-  stopListening,
+  stopListening: stopListening(portHandlers),
 
   disconnect: disconnect(portHandlers),
 }
