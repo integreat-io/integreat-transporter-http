@@ -41,12 +41,12 @@
     "debug": "^4.3.5",
     "got": "^13.0.0",
     "p-throttle": "^6.1.0",
-    "query-string": "^9.0.0"
+    "query-string": "^9.1.0"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^7.1.0",
+    "@integreat/ts-dev-setup": "^7.1.1",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.14.11",
+    "@types/node": "^20.14.12",
     "@types/sinon": "^17.0.3",
     "integreat": "^1.6.0-rc.15",
     "nock": "^13.5.4",
