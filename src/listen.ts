@@ -19,15 +19,11 @@ import type {
   Connection,
   ConnectionIncomingOptions,
   HandlerCase,
+  PortHandlers,
 } from './types.js'
 
 const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')
-
-const handlerCasesPerPort = new Map<
-  number,
-  Map<ConnectionIncomingOptions, HandlerCase>
->()
 
 const matchesHostname = (hostname: unknown, patterns: string[]) =>
   patterns.length === 0 ||
@@ -150,7 +146,7 @@ function sortMatches([a]: [number, HandlerCase], [b]: [number, HandlerCase]) {
 }
 
 function findMatchingHandlerCase(
-  handlerCases: Map<ConnectionIncomingOptions, HandlerCase>,
+  handlerCases: Set<HandlerCase>,
   action: Action,
 ): HandlerCase | undefined {
   const matched: [number, HandlerCase][] = []
@@ -191,10 +187,7 @@ async function authAndPrepareAction(
     : lowerCaseActionPath(authenticatedAction)
 }
 
-const createHandler = (
-  ourServices: Map<ConnectionIncomingOptions, HandlerCase>,
-  incomingPort: number,
-) =>
+const createHandler = (ourServices: Set<HandlerCase>, incomingPort: number) =>
   async function handleIncoming(
     req: http.IncomingMessage,
     res: http.ServerResponse,
@@ -253,12 +246,12 @@ function getErrorFromConnection(connection: Connection | null) {
 }
 
 // Get the handler cases for the specified port. If there are no handler cases
-// for this port yet, we create and stores a map before returning it.
-function getHandlerCasesForPort(port: number) {
-  let handlerCases = handlerCasesPerPort.get(port)
+// for this port yet, we create and stores a Set before returning it.
+function getHandlerCasesForPort(portHandlers: PortHandlers, port: number) {
+  let handlerCases = portHandlers.get(port)
   if (!handlerCases) {
-    handlerCases = new Map()
-    handlerCasesPerPort.set(port, handlerCases)
+    handlerCases = new Set()
+    portHandlers.set(port, handlerCases)
   }
   return handlerCases
 }
@@ -284,50 +277,52 @@ function waitForListeningOrError(server: Server) {
   })
 }
 
-export default async function listen(
-  dispatch: Dispatch,
-  connection: Connection | null,
-  authenticate: AuthenticateExternal,
-): Promise<Response> {
-  debug('Start listening ...')
-  const { incoming, server } = connection || {}
+export default (portHandlers: PortHandlers) =>
+  async function listen(
+    dispatch: Dispatch,
+    connection: Connection | null,
+    authenticate: AuthenticateExternal,
+  ): Promise<Response> {
+    debug('Start listening ...')
+    const { incoming, server } = connection || {}
 
-  if (!incoming?.port || !server) {
-    const errorResponse = getErrorFromConnection(connection)
-    debug(errorResponse.error)
-    return errorResponse
-  }
+    if (!incoming?.port || !server) {
+      const errorResponse = getErrorFromConnection(connection)
+      debug(errorResponse.error)
+      return errorResponse
+    }
 
-  // Set up listener if this is the first service to listen on this port
-  const handlerCases = getHandlerCasesForPort(incoming.port)
+    // Set up listener if this is the first service to listen on this port
+    const handlerCases = getHandlerCasesForPort(portHandlers, incoming.port)
 
-  // Start listening on port if we're not already listening. There is one
-  // server per port, so we only need to check `server.listening` to know
-  // if it's already listening.
-  if (!server.listening) {
-    // Set up handler
-    debug(`Set up request handler for first service on port ${incoming.port}`)
-    const handler = createHandler(handlerCases, incoming.port)
-    server.on('request', handler)
+    // Start listening on port if we're not already listening. There is one
+    // server per port, so we only need to check `server.listening` to know
+    // if it's already listening.
+    if (!server.listening) {
+      // Set up handler
+      debug(`Set up request handler for first service on port ${incoming.port}`)
+      const handler = createHandler(handlerCases, incoming.port)
+      server.on('request', handler)
 
-    // Start listening
-    try {
-      debug(`Start listening to first service on port ${incoming.port}`)
-      server.listen(incoming.port)
-      await waitForListeningOrError(server)
-      debug(`Listening on port ${incoming.port}`)
-    } catch (error) {
-      debug(`Cannot listen to server on port ${incoming.port}. ${error}`)
-      return {
-        status: 'error',
-        error: `Cannot listen to server on port ${incoming.port}. ${error}`,
+      // Start listening
+      try {
+        debug(`Start listening to first service on port ${incoming.port}`)
+        server.listen(incoming.port)
+        await waitForListeningOrError(server)
+        debug(`Listening on port ${incoming.port}`)
+      } catch (error) {
+        debug(`Cannot listen to server on port ${incoming.port}. ${error}`)
+        return {
+          status: 'error',
+          error: `Cannot listen to server on port ${incoming.port}. ${error}`,
+        }
       }
     }
+
+    // Add as a handler case to handler cases list
+    const handlerCase = { options: incoming, dispatch, authenticate }
+    handlerCases.add(handlerCase)
+    connection!.handlerCase = handlerCase // We know connection is set
+
+    return { status: 'ok' }
   }
-
-  // Add as a handler case to handler cases list
-  handlerCases.set(incoming, { options: incoming, dispatch, authenticate })
-  connection!.handlerCases = handlerCases // We know connection is set
-
-  return { status: 'ok' }
-}

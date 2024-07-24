@@ -13,10 +13,11 @@ import disconnect from './disconnect.js'
 
 // Setup
 
+const port = 9001
 const incomingOptions = {
   host: ['localhost'],
   path: ['/entries'],
-  port: 9001,
+  port,
 }
 
 const fn = sinon.stub()
@@ -40,16 +41,19 @@ test('should stop listening when we are listening', async () => {
     removeAllListeners,
     closeIdleConnections,
   } as unknown as http.Server
-  const handlerCases = new Map<ConnectionIncomingOptions, HandlerCase>()
-  handlerCases.set(incomingOptions, createHandlerCase(incomingOptions))
+  const handlerCase = createHandlerCase(incomingOptions)
+  const handlerCases = new Set<HandlerCase>()
+  const portHandlers = new Map<number, Set<HandlerCase>>()
+  portHandlers.set(port, handlerCases)
+  handlerCases.add(handlerCase)
   const connection: Connection = {
     status: 'ok',
     server,
     incoming: incomingOptions,
-    handlerCases,
+    handlerCase,
   }
 
-  await disconnect(connection)
+  await disconnect(portHandlers)(connection)
 
   assert.equal(handlerCases.size, 0)
   assert.equal(
@@ -77,22 +81,23 @@ test('should not close server when there are other handlers', async () => {
   const otherIncomingOptions = {
     host: ['localhost'],
     path: ['/other'],
-    port: 9001,
+    port,
   }
-  const handlerCases = new Map<ConnectionIncomingOptions, HandlerCase>()
-  handlerCases.set(incomingOptions, createHandlerCase(incomingOptions))
-  handlerCases.set(
-    otherIncomingOptions,
-    createHandlerCase(otherIncomingOptions),
-  )
+  const handlerCase0 = createHandlerCase(incomingOptions)
+  const handlerCase1 = createHandlerCase(otherIncomingOptions)
+  const handlerCases = new Set<HandlerCase>()
+  handlerCases.add(handlerCase0)
+  handlerCases.add(handlerCase1)
+  const portHandlers = new Map<number, Set<HandlerCase>>()
+  portHandlers.set(port, handlerCases)
   const connection = {
     status: 'ok',
     server,
     incoming: incomingOptions,
-    handlerCases,
+    handlerCase: handlerCase0,
   }
 
-  await disconnect(connection)
+  await disconnect(portHandlers)(connection)
 
   assert.equal(handlerCases.size, 1, `We have ${handlerCases.size} handlers`)
   assert.equal(
@@ -120,10 +125,11 @@ test('should disconnect when we are not listening', async () => {
   const connection = {
     status: 'ok',
     server,
-    // No incoming or handlerCases
+    // No incoming or handlerCase
   }
+  const portHandlers = new Map<number, Set<HandlerCase>>()
 
-  await disconnect(connection)
+  await disconnect(portHandlers)(connection)
 
   assert.equal(
     removeAllListeners.callCount,
@@ -141,7 +147,8 @@ test('should disconnect when we are not listening', async () => {
 test('should not fail when server is closed twice', async () => {
   const server = http.createServer()
   const connection = { status: 'ok', server }
+  const portHandlers = new Map<number, Set<HandlerCase>>()
 
-  await disconnect(connection)
-  await assert.doesNotReject(disconnect(connection))
+  await disconnect(portHandlers)(connection)
+  await assert.doesNotReject(disconnect(portHandlers)(connection))
 })

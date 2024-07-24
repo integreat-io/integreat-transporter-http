@@ -1,26 +1,34 @@
 import type { Response } from 'integreat'
-import type { Connection } from './types.js'
+import getHandlersForIncoming from './utils/getHandlersForIncoming.js'
+import type { Connection, PortHandlers } from './types.js'
 
-export default async function stopListening(
-  connection: Connection | null,
-): Promise<Response> {
-  if (!connection) {
-    return { status: 'badrequest', error: 'No connection' }
-  }
-  const { incoming, handlerCases } = connection
-  if (!incoming) {
-    return {
-      status: 'noaction',
-      warning: 'No incoming options found on connection',
+export default (portHandlers: PortHandlers) =>
+  async function stopListening(
+    connection: Connection | null,
+  ): Promise<Response> {
+    if (!connection) {
+      return { status: 'badrequest', error: 'No connection' }
     }
-  }
-  if (!handlerCases) {
-    return {
-      status: 'noaction',
-      warning: 'No incoming handler cases found on connection',
+    const handlerCases = getHandlersForIncoming(
+      portHandlers,
+      connection.incoming,
+    )
+    if (!handlerCases) {
+      return {
+        status: 'noaction',
+        warning: 'No incoming handler cases found for this connection',
+      }
     }
-  }
 
-  handlerCases.delete(incoming)
-  return { status: 'ok' }
-}
+    const { handlerCase } = connection
+    if (!handlerCase) {
+      return {
+        status: 'noaction',
+        warning: 'No incoming handler found for this connection',
+      }
+    }
+
+    handlerCases.delete(handlerCase)
+
+    return { status: 'ok' }
+  }

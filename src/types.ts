@@ -39,6 +39,8 @@ export interface HandlerCase {
   authenticate: AuthenticateExternal
 }
 
+export type PortHandlers = Map<number, Set<HandlerCase>>
+
 export interface ConnectionIncomingOptions {
   host: string[]
   path: string[]
@@ -52,6 +54,6 @@ export interface Connection extends Record<string, unknown> {
   status: string
   server?: http.Server
   incoming?: ConnectionIncomingOptions
-  handlerCases?: Map<ConnectionIncomingOptions, HandlerCase>
+  handlerCase?: HandlerCase
   waitFn?: () => Promise<void>
 }
