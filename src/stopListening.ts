@@ -9,6 +9,14 @@ export default (portHandlers: PortHandlers) =>
     if (!connection) {
       return { status: 'badrequest', error: 'No connection' }
     }
+    const { handlerCase } = connection
+    if (!handlerCase) {
+      return {
+        status: 'noaction',
+        warning: 'No incoming handler found for this connection',
+      }
+    }
+
     const handlerCases = getHandlersForIncoming(
       portHandlers,
       connection.incoming,
@@ -17,14 +25,6 @@ export default (portHandlers: PortHandlers) =>
       return {
         status: 'noaction',
         warning: 'No incoming handler cases found for this connection',
-      }
-    }
-
-    const { handlerCase } = connection
-    if (!handlerCase) {
-      return {
-        status: 'noaction',
-        warning: 'No incoming handler found for this connection',
       }
     }
 

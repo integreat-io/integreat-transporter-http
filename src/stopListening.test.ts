@@ -154,11 +154,18 @@ test('should return badrequest when no connection', async () => {
 })
 
 test('should return noaction when connection has no handler cases', async () => {
+  const port = 9042
+  const dispatch = sinon.stub().resolves({ status: 'ok' })
   const connection: Connection = {
     status: 'ok',
     // We don't need a server for this test
-    // No handler case
+    handlerCase: {
+      options: { host: ['localhost'], path: ['/entries'], port },
+      dispatch,
+      authenticate,
+    },
   }
+  // We don't set handler cases set on `portHandlers` for this port
   const expectedResponse = {
     status: 'noaction',
     warning: 'No incoming handler cases found for this connection',
@@ -170,7 +177,7 @@ test('should return noaction when connection has no handler cases', async () => 
 })
 
 test('should return noaction when connection has no handler case', async () => {
-  const port = 9042
+  const port = 9043
   const connection: Connection = {
     status: 'ok',
     // We don't need a server for this test
