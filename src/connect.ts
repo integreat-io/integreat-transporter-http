@@ -49,8 +49,12 @@ function prepareWaitFn(options: ServiceOptions) {
 export default async function connect(
   options: ServiceOptions,
   _authentication: Record<string, unknown> | null,
-  _connection: Connection | null,
+  existingConnection: Connection | null,
 ): Promise<Connection | null> {
+  if (existingConnection && existingConnection.status === 'ok') {
+    return existingConnection
+  }
+
   if (isInvalidThrottleOptions(options)) {
     // Return badrequest if we have throttle options, but they are invalid
     return { status: 'badrequest', error: 'Invalid throttle options' }

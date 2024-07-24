@@ -231,6 +231,26 @@ test('should create a wait function when options has throttle props', async () =
   assert.equal(typeof ret?.waitFn, 'function')
 })
 
+test('should return ok connection as-is', async () => {
+  const options = { uri: 'http://foreign.api' }
+  const connection = { status: 'ok' }
+
+  const ret = await connect(options, null, connection)
+
+  assert.equal(ret, connection)
+})
+
+test('should not return bad connection', async () => {
+  const options = { uri: 'http://foreign.api' }
+  const connection = { status: 'error', error: 'Do not use this!' }
+  const expected = { status: 'ok' }
+
+  const ret = await connect(options, null, connection)
+
+  assert.deepEqual(ret, expected)
+  assert.notEqual(ret, connection) // Just to make sure
+})
+
 test('should return badrequest when throttle options are incorrect', async () => {
   const options = {
     uri: 'http://foreign.api',
