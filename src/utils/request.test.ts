@@ -7,6 +7,7 @@ import { actionFromRequest } from './request.js'
 // Tests
 
 test('should lowercase host when creating action from request', async () => {
+  const port = 9060
   const request = {
     method: 'GET',
     url: '/ENTRIES?filter=all&format=json',
@@ -27,7 +28,7 @@ test('should lowercase host when creating action from request', async () => {
     payload: {
       method: 'GET',
       hostname: 'localhost',
-      port: 9030,
+      port,
       path: '/ENTRIES',
       queryParams: {
         filter: 'all',
@@ -42,12 +43,13 @@ test('should lowercase host when creating action from request', async () => {
     meta: {},
   }
 
-  const ret = await actionFromRequest(request, 9030)
+  const ret = await actionFromRequest(request, port)
 
   assert.deepEqual(ret, expectedAction)
 })
 
 test('should treat query params ending in brackets as an array', async () => {
+  const port = 9061
   const request = {
     method: 'GET',
     url: '/entries?ids[]=ent1&ids[]=ent2&archived=true&pageSize=100',
@@ -68,7 +70,7 @@ test('should treat query params ending in brackets as an array', async () => {
     payload: {
       method: 'GET',
       hostname: 'localhost',
-      port: 9030,
+      port,
       path: '/entries',
       queryParams: {
         ids: ['ent1', 'ent2'],
@@ -84,7 +86,7 @@ test('should treat query params ending in brackets as an array', async () => {
     meta: {},
   }
 
-  const ret = await actionFromRequest(request, 9030)
+  const ret = await actionFromRequest(request, port)
 
   assert.deepEqual(ret, expectedAction)
 })
