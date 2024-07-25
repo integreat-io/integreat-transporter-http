@@ -303,6 +303,53 @@ test('should match the most specific path before a less specific', async (t) => 
   assert.equal(response.body, responseData)
 })
 
+test('should match to a hostname over non-hostname', async (t) => {
+  const port = 9038
+  const responseData = JSON.stringify([{ id: 'ent1' }])
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: responseData })
+  const authenticate = sinon
+    .stub()
+    .resolves({ status: 'ok', access: { ident: { id: 'userFromIntegreat' } } })
+  const server = http.createServer()
+  t.after(() => {
+    server.close()
+  })
+  const connection0 = {
+    status: 'ok',
+    server,
+    incoming: {
+      host: [],
+      path: ['/'],
+      port,
+      sourceService: 'wrongApi',
+    },
+  }
+  const connection1 = {
+    status: 'ok',
+    server,
+    incoming: {
+      host: ['localhost'],
+      path: ['/'],
+      port,
+      sourceService: 'mainApi',
+    },
+  }
+  const url = `http://localhost:${port}`
+
+  const ret0 = await listen(portHandlers)(dispatch, connection0, authenticate)
+  const ret1 = await listen(portHandlers)(dispatch, connection1, authenticate)
+  const response = await got(url, options)
+
+  assert.deepEqual(ret0, { status: 'ok' })
+  assert.deepEqual(ret1, { status: 'ok' })
+  assert.equal(dispatch.callCount, 1, `Dispatched ${dispatch.callCount} times`)
+  const dispatchedAction = dispatch.args[0][0]
+  assert.equal(dispatchedAction.payload.sourceService, 'mainApi')
+  assert.equal(response.statusCode, 200)
+  assert.equal(response.headers['content-type'], 'application/json')
+  assert.equal(response.body, responseData)
+})
+
 test('should lowercase host and path in dispatched action', async () => {
   // Note: This test does not really check that we lowercast the host and path,
   // as Got will do it for us anyway. See next test for the real verification.

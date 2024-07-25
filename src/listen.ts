@@ -26,8 +26,11 @@ const debug = debugFn('integreat:transporter:http')
 const debugHeaders = debugFn('integreat:transporter:http:headers')
 
 const matchesHostname = (hostname: unknown, patterns: string[]) =>
-  patterns.length === 0 ||
-  (typeof hostname === 'string' && patterns.includes(hostname))
+  patterns.length === 0
+    ? 1
+    : typeof hostname === 'string' && patterns.includes(hostname)
+      ? 10000
+      : 0
 
 const matchPattern = (path: string) =>
   function matchPattern(score: number, pattern: string) {
@@ -49,14 +52,20 @@ function matchesPath(path: unknown, patterns: string[]) {
     : 0
 }
 
-const actionMatchesOptions = (
+// Will match the action agains incoming options and return a score based
+// on how well it matches. Matching paths gives a score based on the length
+// of the path pattern. Matching hostnames give a score of 10000 to make
+// sure we never match on paths without a hostname when there are matching
+// incoming options _with_ hostname.
+function actionMatchesOptions(
   action: Action,
   options: ConnectionIncomingOptions,
-) =>
-  matchesHostname(action.payload.hostname, options.host)
-    ? matchesPath(action.payload.path, options.path)
-    : 0
-
+) {
+  const hostScore = matchesHostname(action.payload.hostname, options.host)
+  const pathScore =
+    hostScore > 0 ? matchesPath(action.payload.path, options.path) : 0
+  return pathScore > 0 ? hostScore + pathScore : 0
+}
 const lowerCaseActionPath = (action: Action): Action => ({
   ...action,
   payload: {
@@ -145,6 +154,8 @@ function sortMatches([a]: [number, HandlerCase], [b]: [number, HandlerCase]) {
   return b - a
 }
 
+// Find the best matching incoming handlers by comparing incoming options
+// and pick the one that matches with the highest degree of specificity.
 function findMatchingHandlerCase(
   handlerCases: Set<HandlerCase>,
   action: Action,
