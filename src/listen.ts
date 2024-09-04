@@ -297,6 +297,8 @@ export default (portHandlers: PortHandlers) =>
     debug('Start listening ...')
     const { incoming, server } = connection || {}
 
+    // If the connection is missing an incoming server port or the server is
+    // not set up properly, return an error.
     if (!incoming?.port || !server) {
       const errorResponse = getErrorFromConnection(connection)
       debug(errorResponse.error)
@@ -306,11 +308,14 @@ export default (portHandlers: PortHandlers) =>
     // Set up listener if this is the first service to listen on this port
     const handlerCases = getHandlerCasesForPort(portHandlers, incoming.port)
 
-    // Start listening on port if we're not already listening. There is one
+    // Are we already listening to the server on this port? There is one
     // server per port, so we only need to check `server.listening` to know
     // if it's already listening.
-    if (!server.listening) {
-      // Set up handler
+    if (server.listening) {
+      // We're already listening
+      debug(`Already listening on port ${incoming.port}`)
+    } else {
+      // We're not listening on this port, so set up handler and start listening
       debug(`Set up request handler for first service on port ${incoming.port}`)
       const handler = createHandler(handlerCases, incoming.port)
       server.on('request', handler)
@@ -330,10 +335,13 @@ export default (portHandlers: PortHandlers) =>
       }
     }
 
-    // Add as a handler case to handler cases list
+    // Add a handler case to handler cases list. The http server handler will
+    // look up the right dispatch from these cases, based on the incoming
+    // options.
     const handlerCase = { options: incoming, dispatch, authenticate }
     handlerCases.add(handlerCase)
     connection!.handlerCase = handlerCase // We know connection is set
 
+    // If we got here, return ok.
     return { status: 'ok' }
   }
