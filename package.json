@@ -38,18 +38,18 @@
     "node": ">= 18"
   },
   "dependencies": {
-    "debug": "^4.3.5",
+    "debug": "^4.3.6",
     "got": "^13.0.0",
-    "p-throttle": "^6.1.0",
+    "p-throttle": "^6.2.0",
     "query-string": "^9.1.0"
   },
   "devDependencies": {
     "@integreat/ts-dev-setup": "^7.1.1",
     "@types/debug": "^4.1.12",
-    "@types/node": "^20.14.12",
+    "@types/node": "^20.16.4",
     "@types/sinon": "^17.0.3",
     "integreat": "^1.6.0-rc.15",
-    "nock": "^13.5.4",
+    "nock": "^13.5.5",
     "sinon": "^18.0.0"
   }
 }
