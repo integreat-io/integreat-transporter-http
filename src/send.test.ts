@@ -62,7 +62,7 @@ test('should send data and return status, data, and headers', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert.deepEqual(ret.data, '{"id":"ent1"}')
   assert.deepEqual(ret.headers, expectedHeaders)
   assert(scope.isDone())
@@ -102,7 +102,7 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert.deepEqual(ret.data, 'eyJpZCI6ImVudDEifQ==')
   assert.deepEqual(ret.headers, expectedHeaders)
   assert(scope.isDone())
@@ -127,7 +127,7 @@ test('should use GET method as default when no data', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
   assert(scope.isDone())
 })
@@ -152,7 +152,7 @@ test('should disregard data when GET method is specified', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
   assert(scope.isDone())
 })
@@ -179,7 +179,7 @@ test('should convert all non-string data to JSON', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert.deepEqual(ret.data, '{"id":"ent1"}')
   assert(scope.isDone())
 })
@@ -205,7 +205,7 @@ test('should use method from endpoint', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -231,7 +231,7 @@ test('should support base url', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -260,7 +260,7 @@ test('should set query params from options', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -290,7 +290,7 @@ test('should encode query params correctly', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 test('should set several query params with the same name from array', async () => {
@@ -317,7 +317,7 @@ test('should set several query params with the same name from array', async () =
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -351,7 +351,7 @@ test('should force query param values to string', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -380,7 +380,7 @@ test('should exclude query params with undefined value', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -406,7 +406,7 @@ test('should set query params from options when uri has query string', async () 
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -430,7 +430,7 @@ test('should return ok status on all 200-range statuses', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
   assert(scope.isDone())
 })
 
@@ -451,7 +451,7 @@ test('should return error on not found', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'notfound', ret.error)
+  assert.equal(ret.status, 'notfound', `Responded with '${ret.status}'`)
   assert.equal(
     ret.error,
     'Could not find the url http://json5.test/entries/unknown',
@@ -476,7 +476,7 @@ test('should return error on other error', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'error', ret.error)
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
   assert.equal(
     ret.error,
     'Server returned 500 for http://json6.test/entries/error',
@@ -503,7 +503,7 @@ test('should return response on error', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'error', ret.error)
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
   assert.equal(
     ret.error,
     'Server returned 500 for http://json25.test/entries/error',
@@ -530,7 +530,7 @@ test('should return error on request error', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'error', ret.error)
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
 })
 
 test('should respond with badrequest on 400', async () => {
@@ -551,7 +551,7 @@ test('should respond with badrequest on 400', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'badrequest', ret.error)
+  assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
   assert.equal(typeof ret.error, 'string')
 })
 
@@ -573,7 +573,29 @@ test('should respond with timeout on 408', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'timeout', ret.error)
+  assert.equal(ret.status, 'timeout', `Responded with '${ret.status}'`)
+  assert.equal(typeof ret.error, 'string')
+})
+
+test('should respond with toomany on 429', async () => {
+  nock('http://json30.test').put('/entries/ent1', '{}').reply(429, {})
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data: '{}' },
+    meta: {
+      auth: {},
+      options: prepareOptions(
+        {
+          uri: 'http://json30.test/entries/ent1',
+        },
+        serviceId,
+      ),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  assert.equal(ret.status, 'toomany', `Responded with '${ret.status}'`)
   assert.equal(typeof ret.error, 'string')
 })
 
@@ -595,7 +617,7 @@ test('should reject on 401 with auth', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'noaccess', ret.error)
+  assert.equal(ret.status, 'noaccess', `Responded with '${ret.status}'`)
   assert.equal(ret.error, 'Not authorized (401)')
 })
 
@@ -617,7 +639,7 @@ test('should reject on 401 without auth', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'noaccess', ret.error)
+  assert.equal(ret.status, 'noaccess', `Responded with '${ret.status}'`)
   assert.equal(ret.error, 'Service requires authentication (401)')
 })
 
@@ -639,7 +661,7 @@ test('should reject on 403 ', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'noaccess', ret.error)
+  assert.equal(ret.status, 'noaccess', `Responded with '${ret.status}'`)
   assert.equal(ret.error, 'Service requires authentication (403)')
 })
 
@@ -670,7 +692,7 @@ test('should send with headers from endpoint', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
 test('should support custom timeout in milliseconds', async () => {
@@ -695,7 +717,7 @@ test('should support custom timeout in milliseconds', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'timeout', ret.error)
+  assert.equal(ret.status, 'timeout', `Responded with '${ret.status}'`)
   assert.equal(typeof ret.error, 'string')
 })
 
@@ -723,7 +745,7 @@ test('should send with auth headers', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
 test('should not send with auth headers when authInData is true', async () => {
@@ -751,7 +773,8 @@ test('should not send with auth headers when authInData is true', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'error', ret.error) // An error here will tell us that the headers were not sent
+  // An error here will tell us that the headers were not sent
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
 })
 
 test('should retrieve with headers from action', async () => {
@@ -792,7 +815,7 @@ test('should retrieve with headers from action', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
 test('should remove content-type header in GET requests', async () => {
@@ -825,7 +848,7 @@ test('should remove content-type header in GET requests', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
 test('should retrieve with auth params in querystring', async () => {
@@ -855,7 +878,7 @@ test('should retrieve with auth params in querystring', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
 test('should throttle calls when options has throttle settings', async () => {
@@ -887,10 +910,10 @@ test('should throttle calls when options has throttle settings', async () => {
   const ret2 = await send(action, conn)
   const ret3 = await send(action, conn)
 
-  assert.equal(ret0.status, 'ok', ret0.error)
-  assert.equal(ret1.status, 'ok', ret1.error)
-  assert.equal(ret2.status, 'ok', ret2.error)
-  assert.equal(ret3.status, 'ok', ret3.error)
+  assert.equal(ret0.status, 'ok', `Responded with '${ret0.status}'`)
+  assert.equal(ret1.status, 'ok', `Responded with '${ret1.status}'`)
+  assert.equal(ret2.status, 'ok', `Responded with '${ret2.status}'`)
+  assert.equal(ret3.status, 'ok', `Responded with '${ret3.status}'`)
   const timestamp0 = extractTimestamp(ret0.data)
   const timestamp1 = extractTimestamp(ret1.data)
   const timestamp2 = extractTimestamp(ret2.data)
@@ -919,7 +942,7 @@ test('should return error when no endpoint', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'badrequest', ret.error)
+  assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
 })
 
 test('should return error when no uri', async () => {
@@ -933,7 +956,7 @@ test('should return error when no uri', async () => {
 
   const ret = await send(action, null)
 
-  assert.equal(ret.status, 'badrequest', ret.error)
+  assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
 })
 
 test.todo('should retry')

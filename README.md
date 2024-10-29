@@ -138,6 +138,7 @@ Integreat status code. The mapping is as follows:
 - `403` -> `'noaccess'`
 - `404` -> `'notfound'`
 - `408` -> `'timeout'`
+- `429` -> `'toomany'`
 - Everything else -> `'error'`
 
 When listening for incoming requests, the transporter will map the Integreat
@@ -151,6 +152,7 @@ status code from the response to an http status code. The mapping is as follows:
 - `'noaccess'` -> `403` (or `401` when the `reason` is `'noauth'`)
 - `'notfound'` -> `404`
 - `'timeout'` -> `408`
+- `'toomany'` -> `429`
 - Everything else -> `500`
 
 ### Authenticator
