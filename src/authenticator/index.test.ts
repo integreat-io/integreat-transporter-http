@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import authenticator from './index.js'
+import authenticator, { HttpOptions } from './index.js'
 
 // Setup
 
@@ -67,7 +67,7 @@ test('asHttpHeaders should always return empty object for now', () => {
 // Tests -- validate
 
 test('validate should return ident when Authorization matches options', async () => {
-  const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
+  const options: HttpOptions = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
     type: 'GET',
@@ -90,7 +90,7 @@ test('validate should return ident when Authorization matches options', async ()
 })
 
 test('validate should return autherror when Authorization does not match options', async () => {
-  const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
+  const options: HttpOptions = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
     type: 'GET',
@@ -117,7 +117,11 @@ test('validate should return autherror when Authorization does not match options
 })
 
 test('validate should return autherror when Authorization does not match type', async () => {
-  const options = { type: 'Unknown', key: 'johnf', secret: 's3cr3t' }
+  const options = {
+    type: 'Unknown', // We know this is not a valid type
+    key: 'johnf',
+    secret: 's3cr3t',
+  } as unknown as HttpOptions
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
     type: 'GET',
@@ -144,7 +148,7 @@ test('validate should return autherror when Authorization does not match type', 
 })
 
 test('validate should return noaccess when Authorization is missing', async () => {
-  const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
+  const options: HttpOptions = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = {
     type: 'GET',
@@ -171,7 +175,7 @@ test('validate should return noaccess when Authorization is missing', async () =
 })
 
 test('validate should return noaccess when no action', async () => {
-  const options = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
+  const options: HttpOptions = { type: 'Basic', key: 'johnf', secret: 's3cr3t' }
   const authentication = { status: 'granted' } // Doesn't matter what we pass here
   const action = null
   const expected = {
