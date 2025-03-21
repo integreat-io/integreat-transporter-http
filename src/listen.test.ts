@@ -575,7 +575,12 @@ test('should skip response headers with value undefined', async (t) => {
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
   assert.equal(response.statusCode, 200)
-  assert(!response.headers.hasOwnProperty('access-control-allow-origin'))
+  assert(
+    !Object.prototype.hasOwnProperty.call(
+      response.headers,
+      'access-control-allow-origin',
+    ),
+  )
 })
 
 test('should use content type from response headers', async (t) => {

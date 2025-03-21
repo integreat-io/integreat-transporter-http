@@ -67,7 +67,7 @@ test('should return true when incoming is set in options', () => {
     },
   }
 
-  const ret = transporter.shouldListen!(options)
+  const ret = transporter.shouldListen?.(options)
 
   assert.equal(ret, true)
 })
@@ -77,7 +77,7 @@ test('should return false when incoming is not set in options', () => {
     uri: 'http://foreign.api',
   }
 
-  const ret = transporter.shouldListen!(options)
+  const ret = transporter.shouldListen?.(options)
 
   assert.equal(ret, false)
 })

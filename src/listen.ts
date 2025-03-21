@@ -107,7 +107,7 @@ function respond(
         ...headers,
       })
       .end(responseData)
-  } catch (error) {
+  } catch {
     res
       .writeHead(500)
       .end(JSON.stringify({ status: 'error', error: 'Internal server error' }))
@@ -299,7 +299,7 @@ export default (portHandlers: PortHandlers) =>
 
     // If the connection is missing an incoming server port or the server is
     // not set up properly, return an error.
-    if (!incoming?.port || !server) {
+    if (!connection || !incoming?.port || !server) {
       const errorResponse = getErrorFromConnection(connection)
       debug(errorResponse.error)
       return errorResponse
@@ -340,7 +340,7 @@ export default (portHandlers: PortHandlers) =>
     // options.
     const handlerCase = { options: incoming, dispatch, authenticate }
     handlerCases.add(handlerCase)
-    connection!.handlerCase = handlerCase // We know connection is set
+    connection.handlerCase = handlerCase
 
     // If we got here, return ok.
     return { status: 'ok' }

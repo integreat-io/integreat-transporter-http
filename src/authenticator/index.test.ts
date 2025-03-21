@@ -18,7 +18,7 @@ const dispatch = async () => ({ status: 'ok' })
 test('authenticate should always refuse for now', async () => {
   const options = {}
 
-  const ret = await authenticator.authenticate(options, action, dispatch)
+  const ret = await authenticator.authenticate(options, action, dispatch, null)
 
   assert.equal(ret.status, 'refused')
   assert.equal(ret.error, 'Not implemented')
@@ -79,7 +79,7 @@ test('validate should return ident when Authorization matches options', async ()
   }
   const expected = { status: 'ok', access: { ident: { id: 'johnf' } } }
 
-  const ret = await authenticator.validate!(
+  const ret = await authenticator.validate?.(
     authentication,
     options,
     action,
@@ -106,7 +106,7 @@ test('validate should return autherror when Authorization does not match options
     reason: 'invalidauth',
   }
 
-  const ret = await authenticator.validate!(
+  const ret = await authenticator.validate?.(
     authentication,
     options,
     action,
@@ -137,7 +137,7 @@ test('validate should return autherror when Authorization does not match type', 
     reason: 'invalidauth',
   }
 
-  const ret = await authenticator.validate!(
+  const ret = await authenticator.validate?.(
     authentication,
     options,
     action,
@@ -164,7 +164,7 @@ test('validate should return noaccess when Authorization is missing', async () =
     reason: 'noauth',
   }
 
-  const ret = await authenticator.validate!(
+  const ret = await authenticator.validate?.(
     authentication,
     options,
     action,
@@ -184,7 +184,7 @@ test('validate should return noaccess when no action', async () => {
     reason: 'noauth',
   }
 
-  const ret = await authenticator.validate!(
+  const ret = await authenticator.validate?.(
     authentication,
     options,
     action,

@@ -40,7 +40,7 @@ const isInvalidThrottleOptions = (options: ServiceOptions) =>
 
 function prepareWaitFn(options: ServiceOptions) {
   if (options.throttle) {
-    return pThrottle(options.throttle)(async () => {})
+    return pThrottle(options.throttle)(async () => undefined)
   } else {
     return undefined
   }
