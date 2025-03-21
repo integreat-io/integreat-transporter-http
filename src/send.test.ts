@@ -959,4 +959,29 @@ test('should return error when no uri', async () => {
   assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
 })
 
-test.todo('should retry')
+test('should honor noLogging', async () => {
+  // Note: We don't really test this, as logging is done with DEBUG, that don't
+  // log in tests. But we verify that nothing breaks, at least
+  const data = 'Plain text'
+  const scope = nock('http://json31.test', {
+    reqheaders: { 'Content-Type': 'text/plain' },
+  })
+    .put('/entries/ent1', data)
+    .reply(200, { id: 'ent1' })
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data },
+    meta: {
+      options: prepareOptions(
+        { uri: 'http://json31.test/entries/ent1' },
+        serviceId,
+      ),
+      noLogging: true,
+    },
+  }
+
+  const ret = await send(action, null)
+
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
+})

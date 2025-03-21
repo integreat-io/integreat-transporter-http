@@ -18,21 +18,26 @@ function prepareLogUrl(url: string, query: URLSearchParams) {
   return querystring ? `${bareUrl}?${querystring}` : bareUrl
 }
 
-const logRequest = (request: Partial<GotOptions>) => {
-  const message = `Sending ${request.method} ${request.url}`
-  debug('%s: %o %s', message, request.headers, request.body)
+const logRequest = (request: Partial<GotOptions>, noLogging: boolean) => {
+  if (!noLogging) {
+    const message = `Sending ${request.method} ${request.url}`
+    debug('%s: %o %s', message, request.headers, request.body)
+  }
 }
 
 const logResponse = (
   response: Response,
   { url, method }: Partial<GotOptions>,
+  noLogging: boolean,
 ) => {
-  const { status, error } = response
-  const message =
-    status === 'ok'
-      ? `Success from ${method} ${url}`
-      : `Error '${status}' from ${method} ${url}: ${error}`
-  debug('%s: %o', message, response)
+  if (!noLogging) {
+    const { status, error } = response
+    const message =
+      status === 'ok'
+        ? `Success from ${method} ${url}`
+        : `Error '${status}' from ${method} ${url}: ${error}`
+    debug('%s: %o', message, response)
+  }
 }
 
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
@@ -193,6 +198,7 @@ export default async function send(
     url: prepareLogUrl(url, options.searchParams),
     ...options,
   }
+  const noLogging = !!action.meta?.noLogging
 
   if (connection?.waitFn) {
     // This is present when we have throttle setting, and will cause us to wait
@@ -201,10 +207,10 @@ export default async function send(
   }
 
   try {
-    logRequest(logOptions)
+    logRequest(logOptions, noLogging)
     const gotResponse = await got<string>(url, options)
     const response = responseFromGotResponse(gotResponse, url, action)
-    logResponse(response, logOptions)
+    logResponse(response, logOptions, noLogging)
     return response
   } catch (error) {
     return createResponseWithError(action, url, error)
