@@ -44,7 +44,7 @@
     "query-string": "^9.1.1"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^7.1.1",
+    "@integreat/ts-dev-setup": "^8.1.2",
     "@types/debug": "^4.1.12",
     "@types/node": "^20.17.25",
     "@types/sinon": "^17.0.4",
