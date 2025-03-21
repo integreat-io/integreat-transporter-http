@@ -29,6 +29,8 @@ export function statusCodeFromResponse(response: Response) {
       return 404
     case 'timeout':
       return 408
+    case 'toomany':
+      return 429
     default:
       return 500
   }
@@ -92,6 +94,8 @@ function responseStatusFromCode(statusCode?: number) {
       return 'notfound'
     case 408:
       return 'timeout'
+    case 429:
+      return 'toomany'
     default:
       return 'error'
   }

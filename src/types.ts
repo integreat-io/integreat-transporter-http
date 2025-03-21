@@ -1,5 +1,5 @@
 import type http from 'http'
-import type { Headers } from 'integreat'
+import type { Headers, Dispatch, AuthenticateExternal } from 'integreat'
 
 export interface HttpChallenge {
   scheme: string
@@ -27,7 +27,19 @@ export interface ServiceOptions extends Record<string, unknown> {
   timeout?: number
   authAsQuery?: boolean
   authInData?: boolean
+  throttle?: {
+    limit: number
+    interval: number
+  }
 }
+
+export interface HandlerCase {
+  options: ConnectionIncomingOptions
+  dispatch: Dispatch
+  authenticate: AuthenticateExternal
+}
+
+export type PortHandlers = Map<number, Set<HandlerCase>>
 
 export interface ConnectionIncomingOptions {
   host: string[]
@@ -42,4 +54,6 @@ export interface Connection extends Record<string, unknown> {
   status: string
   server?: http.Server
   incoming?: ConnectionIncomingOptions
+  handlerCase?: HandlerCase
+  waitFn?: () => Promise<void>
 }

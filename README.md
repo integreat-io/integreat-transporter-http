@@ -2,8 +2,8 @@
 
 Transporter that lets
 [Integreat](https://github.com/integreat-io/integreat) send and receive data
-over http/https. Also contains [an authenticator](#authenticator) for http specific
-authentication.
+over http/https. Also contains [an authenticator](#authenticator) for http
+specific authentication.
 
 [![npm Version](https://img.shields.io/npm/v/integreat-transporter-http.svg)](https://www.npmjs.com/package/integreat-transporter-http)
 [![Maintainability](https://api.codeclimate.com/v1/badges/6abe9cf4601fe08a18b8/maintainability)](https://codeclimate.com/github/integreat-io/integreat-transporter-http/maintainability)
@@ -12,7 +12,7 @@ authentication.
 
 ### Prerequisits
 
-Requires node v18 and Integreat v1.0.
+Requires node v18 and Integreat v1.6.
 
 ### Installing and using
 
@@ -68,20 +68,26 @@ Available options for action meta options:
   will encode the raw body buffer as base64, while `string` will simply return
   the body as a string. Default is `string`
 - `timeout`: Timeout in milliseconds for the request. Default is 120000
+- `throttle`: An object with the properties `limit` and `interval`. Both should
+  be numbers. `limit` defines how many times we will send requests to a
+  service within the time period set by `interval` (in milliseconds). This is
+  very simplistic rate limiting, and will cause the transporter to simply pause
+  between calls when the limit is reached for an interval.
 
-- `incoming`: An object with options to define an incoming service. The precense
-  of this object will start an http server, and the properties of the object
-  will define what requests this service will respond to. The following options
-  are available:
+- `incoming`: An object with options to define an incoming service. The
+  precense of this object will start an http server, and the properties of the
+  object will define what requests this service will respond to. The following
+  options are available:
   - `port`: The port to listen on. Default is 8080
-  - `host`: The host to listen on. This is case insensitive. Default is any host
-  - `path`: The path to listen on. This will match anything "below" the path you
-    specify, meaning `'/entries'` will match `'/entries/ent1'`. The match is
-    case insensitive. Default is any path
-  - `sourceService`: When this is a string, it will be set as `sourceService` on
-    the action being dispatched from the listener. Only use this if you want to
-    override the default behaviour of Integreat, that is to set the id of the
-    service as `sourceService`.
+  - `host`: The host to listen on. This is case insensitive. Default is any
+    host
+  - `path`: The path to listen on. This will match anything "below" the path
+    you specify, meaning `'/entries'` will match `'/entries/ent1'`. The match
+    is case insensitive. Default is any path
+  - `sourceService`: When this is a string, it will be set as `sourceService`
+    on the action being dispatched from the listener. Only use this if you
+    want to override the default behaviour of Integreat, that is to set the id
+    of the service as `sourceService`.
   - `challenges`: An array of challenge objects, used to form the correct
     response headers when an incoming request is unauthorized. The objects has
     the following properties: `scheme`, `realm`, and `params`. The two first
@@ -94,13 +100,13 @@ Available options for action meta options:
     the default.
 
 **A note on headers:** Actions may have an `headers` object on the payload and
-the `meta.options` object. If they are both there, they will be merged, with the
-`payload.headers` object taking precedence. Also, if there's no `Content-Type`
-header in the action, and this is not a `GET` request, it will be set based on
-the `payload.data`. If it is a string, the content type will be `'text/plain'`,
-otherwise it will be `'application/json'`. Finally, the authenticator set for
-the service may have provided an object of headers, which will override
-everything else.
+the `meta.options` object. If they are both there, they will be merged, with
+the `payload.headers` object taking precedence. Also, if there's no
+`Content-Type` header in the action, and this is not a `GET` request, it will
+be set based on the `payload.data`. If it is a string, the content type will
+be `'text/plain'`, otherwise it will be `'application/json'`. Finally, the
+authenticator set for the service may have provided an object of headers,
+which will override everything else.
 
 #### Incoming requests
 
@@ -133,10 +139,12 @@ Integreat status code. The mapping is as follows:
 - `403` -> `'noaccess'`
 - `404` -> `'notfound'`
 - `408` -> `'timeout'`
+- `429` -> `'toomany'`
 - Everything else -> `'error'`
 
 When listening for incoming requests, the transporter will map the Integreat
-status code from the response to an http status code. The mapping is as follows:
+status code from the response to an http status code. The mapping is as
+follows:
 
 - `'ok'` -> `200`
 - `'noaction'` -> `200`
@@ -146,12 +154,13 @@ status code from the response to an http status code. The mapping is as follows:
 - `'noaccess'` -> `403` (or `401` when the `reason` is `'noauth'`)
 - `'notfound'` -> `404`
 - `'timeout'` -> `408`
+- `'toomany'` -> `429`
 - Everything else -> `500`
 
 ### Authenticator
 
-The included http authenticator verifies `Authorization` header according to the
-given options, and responds with an `ok` response with an `ident` on the
+The included http authenticator verifies `Authorization` header according to
+the given options, and responds with an `ok` response with an `ident` on the
 `access` object, or an error.
 
 Example of use:

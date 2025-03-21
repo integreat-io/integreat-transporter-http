@@ -18,21 +18,26 @@ function prepareLogUrl(url: string, query: URLSearchParams) {
   return querystring ? `${bareUrl}?${querystring}` : bareUrl
 }
 
-const logRequest = (request: Partial<GotOptions>) => {
-  const message = `Sending ${request.method} ${request.url}`
-  debug('%s: %o %s', message, request.headers, request.body)
+const logRequest = (request: Partial<GotOptions>, noLogging: boolean) => {
+  if (!noLogging) {
+    const message = `Sending ${request.method} ${request.url}`
+    debug('%s: %o %s', message, request.headers, request.body)
+  }
 }
 
 const logResponse = (
   response: Response,
-  { url, method }: Partial<GotOptions>
+  { url, method }: Partial<GotOptions>,
+  noLogging: boolean,
 ) => {
-  const { status, error } = response
-  const message =
-    status === 'ok'
-      ? `Success from ${method} ${url}`
-      : `Error '${status}' from ${method} ${url}: ${error}`
-  debug('%s: %o', message, response)
+  if (!noLogging) {
+    const { status, error } = response
+    const message =
+      status === 'ok'
+        ? `Success from ${method} ${url}`
+        : `Error '${status}' from ${method} ${url}: ${error}`
+    debug('%s: %o', message, response)
+  }
 }
 
 const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
@@ -57,10 +62,10 @@ const prepareQueryValue = (value: unknown): string =>
   isDate(value)
     ? value.toISOString()
     : value === null
-    ? ''
-    : ['string', 'number', 'boolean'].includes(typeof value)
-    ? String(value)
-    : JSON.stringify(value)
+      ? ''
+      : ['string', 'number', 'boolean'].includes(typeof value)
+        ? String(value)
+        : JSON.stringify(value)
 
 const prepareQueryParams = (params: Record<string, unknown>) =>
   new URLSearchParams(
@@ -74,13 +79,13 @@ const prepareQueryParams = (params: Record<string, unknown>) =>
                 ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
               ]
             : [...params, [key, prepareQueryValue(value)] as KeyVal],
-        [] as KeyVal[]
-      ) as URLSearchArray
+        [] as KeyVal[],
+      ) as URLSearchArray,
   )
 
 const generateQueryParams = (
   { queryParams, authAsQuery, uri }: ServiceOptions = {},
-  auth?: Record<string, unknown> | boolean | null
+  auth?: Record<string, unknown> | boolean | null,
 ) =>
   prepareQueryParams({
     ...extractQueryParamsFromUri(uri),
@@ -95,7 +100,7 @@ const removeContentTypeIf = (headers: Headers, doRemove: boolean) =>
           key.toLowerCase() === 'content-type'
             ? headers
             : { ...headers, [key]: value },
-        {}
+        {},
       )
     : headers
 
@@ -103,9 +108,9 @@ const createHeaders = (
   options?: ServiceOptions,
   data?: unknown,
   headers?: Headers,
-  auth?: Record<string, unknown> | boolean | null
+  auth?: Record<string, unknown> | boolean | null,
 ): Record<string, string | string[]> => ({
-  'user-agent': 'integreat-transporter-http/1.1',
+  'user-agent': 'integreat-transporter-http/1.4',
   ...(typeof data === 'string'
     ? { 'Content-Type': 'text/plain' }
     : { 'Content-Type': 'application/json' }), // Will be removed later on if GET
@@ -133,7 +138,7 @@ function optionsFromEndpoint({
     body: method === 'GET' ? undefined : prepareBody(payload.data),
     headers: removeContentTypeIf(
       createHeaders(options, payload.data, payload.headers, auth),
-      method === 'GET'
+      method === 'GET',
     ),
     retry: { limit: 0 },
     throwHttpErrors: false,
@@ -162,7 +167,7 @@ function responseFormatFromAction(action: Action) {
 const responseFromGotResponse = (
   gotResponse: GotResponse,
   url: string,
-  action: Action
+  action: Action,
 ) =>
   isOkResponse(gotResponse)
     ? createResponse(
@@ -170,13 +175,13 @@ const responseFromGotResponse = (
         'ok',
         extractResponseData(gotResponse, responseFormatFromAction(action)),
         undefined,
-        gotResponse.headers
+        gotResponse.headers,
       )
     : createResponseWithError(action, url, gotResponse)
 
 export default async function send(
   action: Action,
-  _connection: Connection | null
+  connection: Connection | null,
 ): Promise<Response> {
   const { url, ...options } = optionsFromEndpoint(action)
 
@@ -185,7 +190,7 @@ export default async function send(
       action,
       'badrequest',
       undefined,
-      'No uri is provided in the action'
+      'No uri is provided in the action',
     )
   }
 
@@ -193,12 +198,19 @@ export default async function send(
     url: prepareLogUrl(url, options.searchParams),
     ...options,
   }
+  const noLogging = !!action.meta?.noLogging
+
+  if (connection?.waitFn) {
+    // This is present when we have throttle setting, and will cause us to wait
+    // if the limit is reaching within the set interval.
+    await connection.waitFn()
+  }
 
   try {
-    logRequest(logOptions)
+    logRequest(logOptions, noLogging)
     const gotResponse = await got<string>(url, options)
     const response = responseFromGotResponse(gotResponse, url, action)
-    logResponse(response, logOptions)
+    logResponse(response, logOptions, noLogging)
     return response
   } catch (error) {
     return createResponseWithError(action, url, error)

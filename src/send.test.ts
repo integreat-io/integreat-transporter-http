@@ -1,6 +1,9 @@
-import test from 'ava'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 import nock from 'nock'
 import transporter from './index.js'
+import { isObject } from './utils/is.js'
+import connect from './connect.js'
 
 import send from './send.js'
 
@@ -9,13 +12,24 @@ import send from './send.js'
 const { prepareOptions } = transporter
 const serviceId = 'http'
 
-test.after.always(() => {
+function extractTimestamp(data: unknown): number {
+  if (typeof data === 'string') {
+    const item = JSON.parse(data)
+    if (isObject(item)) {
+      const timestamp = item.timestamp
+      return typeof timestamp === 'number' ? timestamp : 0
+    }
+  }
+  return 0
+}
+
+test.after(() => {
   nock.restore()
 })
 
 // Tests
 
-test('should send data and return status, data, and headers', async (t) => {
+test('should send data and return status, data, and headers', async () => {
   const data = 'Plain text'
   const scope = nock('http://json1.test', {
     reqheaders: { 'Content-Type': 'text/plain' },
@@ -27,7 +41,7 @@ test('should send data and return status, data, and headers', async (t) => {
       {
         'Content-Type': 'application/json; charset=UTF-8',
         Expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
-      }
+      },
     )
   const action = {
     type: 'SET',
@@ -37,7 +51,7 @@ test('should send data and return status, data, and headers', async (t) => {
         {
           uri: 'http://json1.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -48,13 +62,13 @@ test('should send data and return status, data, and headers', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.deepEqual(ret.data, '{"id":"ent1"}')
-  t.deepEqual(ret.headers, expectedHeaders)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.deepEqual(ret.data, '{"id":"ent1"}')
+  assert.deepEqual(ret.headers, expectedHeaders)
+  assert(scope.isDone())
 })
 
-test('should return buffer data as base64 when meta.options.responseFormat is base64', async (t) => {
+test('should return buffer data as base64 when meta.options.responseFormat is base64', async () => {
   const data = 'Plain text'
   const scope = nock('http://json1.test', {
     reqheaders: { 'Content-Type': 'text/plain' },
@@ -66,7 +80,7 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
       {
         'Content-Type': 'application/json; charset=UTF-8',
         Expires: 'Mon, 28 Mar 2022 13:50:13 GMT',
-      }
+      },
     )
   const action = {
     type: 'SET',
@@ -77,7 +91,7 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
           uri: 'http://json1.test/entries/ent1',
           responseFormat: 'base64',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
@@ -88,13 +102,13 @@ test('should return buffer data as base64 when meta.options.responseFormat is ba
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.deepEqual(ret.data, 'eyJpZCI6ImVudDEifQ==')
-  t.deepEqual(ret.headers, expectedHeaders)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.deepEqual(ret.data, 'eyJpZCI6ImVudDEifQ==')
+  assert.deepEqual(ret.headers, expectedHeaders)
+  assert(scope.isDone())
 })
 
-test('should use GET method as default when no data', async (t) => {
+test('should use GET method as default when no data', async () => {
   const scope = nock('http://json2.test', { badheaders: ['Content-Type'] })
     .get('/entries/ent1')
     .reply(200, { id: 'ent1', type: 'entry' })
@@ -106,19 +120,19 @@ test('should use GET method as default when no data', async (t) => {
         {
           uri: 'http://json2.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
+  assert(scope.isDone())
 })
 
-test('should disregard data when GET method is specified', async (t) => {
+test('should disregard data when GET method is specified', async () => {
   const scope = nock('http://json2.test', { badheaders: ['Content-Type'] })
     .get('/entries/ent1')
     .reply(200, { id: 'ent1', type: 'entry' })
@@ -131,19 +145,19 @@ test('should disregard data when GET method is specified', async (t) => {
           uri: 'http://json2.test/entries/ent1',
           method: 'GET',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.deepEqual(ret.data, '{"id":"ent1","type":"entry"}')
+  assert(scope.isDone())
 })
 
-test('should convert all non-string data to JSON', async (t) => {
+test('should convert all non-string data to JSON', async () => {
   const data = { id: 'ent1', title: 'Entry 1' }
   const scope = nock('http://json18.test', {
     reqheaders: { 'Content-Type': 'application/json' },
@@ -158,19 +172,19 @@ test('should convert all non-string data to JSON', async (t) => {
         {
           uri: 'http://json18.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.deepEqual(ret.data, '{"id":"ent1"}')
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.deepEqual(ret.data, '{"id":"ent1"}')
+  assert(scope.isDone())
 })
 
-test('should use method from endpoint', async (t) => {
+test('should use method from endpoint', async () => {
   const data = '{"id":"ent1","title":"Entry 1"}'
   const scope = nock('http://json3.test')
     .post('/entries/ent1', data)
@@ -184,18 +198,18 @@ test('should use method from endpoint', async (t) => {
           uri: 'http://json3.test/entries/ent1',
           method: 'POST' as const,
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should support base url', async (t) => {
+test('should support base url', async () => {
   const scope = nock('http://json19.test', {
     reqheaders: { 'Content-Type': 'text/plain' },
   })
@@ -210,18 +224,18 @@ test('should support base url', async (t) => {
           baseUri: 'http://json19.test/',
           uri: '/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should set query params from options', async (t) => {
+test('should set query params from options', async () => {
   const scope = nock('http://json20.test')
     .get('/entries')
     .query({ createdAfter: '2020-04-18T11:19:45.000Z', order: 'desc' })
@@ -239,21 +253,21 @@ test('should set query params from options', async (t) => {
             order: 'desc',
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should encode query params correctly', async (t) => {
+test('should encode query params correctly', async () => {
   const scope = nock('http://json21.test')
     .get(
-      '/entries?order=desc&query=*%5B_type%3D%3D%27table%27%26%26key%3D%3D%24table%5D%5B0%5D.fields%7Bkey%2Cname%2Ctype%7D'
+      '/entries?order=desc&query=*%5B_type%3D%3D%27table%27%26%26key%3D%3D%24table%5D%5B0%5D.fields%7Bkey%2Cname%2Ctype%7D',
     )
     .reply(200, [{ id: 'ent1' }])
   const action = {
@@ -269,17 +283,17 @@ test('should encode query params correctly', async (t) => {
             query: "*[_type=='table'&&key==$table][0].fields{key,name,type}",
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
-test('should set several query params with the same name from array', async (t) => {
+test('should set several query params with the same name from array', async () => {
   const scope = nock('http://json26.test')
     .get('/entries?expand%5B%5D=data.user&expand%5B%5D=data.images&order=desc')
     .reply(200, [{ id: 'ent1' }])
@@ -296,18 +310,18 @@ test('should set several query params with the same name from array', async (t) 
             order: 'desc',
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should force query param values to string', async (t) => {
+test('should force query param values to string', async () => {
   const scope = nock('http://json22.test')
     .get('/entries')
     .query({
@@ -330,18 +344,18 @@ test('should force query param values to string', async (t) => {
             obj: {},
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should exclude query params with undefined value', async (t) => {
+test('should exclude query params with undefined value', async () => {
   const scope = nock('http://json23.test')
     .get('/entries')
     .query({ order: 'desc' })
@@ -359,18 +373,18 @@ test('should exclude query params with undefined value', async (t) => {
             exclude: undefined,
           },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should set query params from options when uri has query string', async (t) => {
+test('should set query params from options when uri has query string', async () => {
   const scope = nock('http://json17.test')
     .get('/entries')
     .query({ page: 1, order: 'desc' })
@@ -385,18 +399,18 @@ test('should set query params from options when uri has query string', async (t)
           uri: '/entries?page=1',
           queryParams: { order: 'desc' },
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should return ok status on all 200-range statuses', async (t) => {
+test('should return ok status on all 200-range statuses', async () => {
   const data = '{"id":"ent2","title":"Entry 2"}'
   const scope = nock('http://json4.test')
     .put('/entries/ent2', data)
@@ -409,18 +423,18 @@ test('should return ok status on all 200-range statuses', async (t) => {
         {
           uri: 'http://json4.test/entries/ent2',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
-  t.true(scope.isDone())
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
 })
 
-test('should return error on not found', async (t) => {
+test('should return error on not found', async () => {
   nock('http://json5.test').get('/entries/unknown').reply(404)
   const action = {
     type: 'GET',
@@ -430,19 +444,22 @@ test('should return error on not found', async (t) => {
         {
           uri: 'http://json5.test/entries/unknown',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'notfound', ret.error)
-  t.is(ret.error, 'Could not find the url http://json5.test/entries/unknown')
-  t.is(ret.data, undefined)
+  assert.equal(ret.status, 'notfound', `Responded with '${ret.status}'`)
+  assert.equal(
+    ret.error,
+    'Could not find the url http://json5.test/entries/unknown',
+  )
+  assert.equal(ret.data, undefined)
 })
 
-test('should return error on other error', async (t) => {
+test('should return error on other error', async () => {
   nock('http://json6.test').get('/entries/error').reply(500)
   const action = {
     type: 'GET',
@@ -452,19 +469,22 @@ test('should return error on other error', async (t) => {
         {
           uri: 'http://json6.test/entries/error',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'error', ret.error)
-  t.is(ret.error, 'Server returned 500 for http://json6.test/entries/error')
-  t.is(ret.data, undefined)
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
+  assert.equal(
+    ret.error,
+    'Server returned 500 for http://json6.test/entries/error',
+  )
+  assert.equal(ret.data, undefined)
 })
 
-test('should return response on error', async (t) => {
+test('should return response on error', async () => {
   nock('http://json25.test')
     .get('/entries/error')
     .reply(500, { error: 'No time to deal with this' })
@@ -476,19 +496,22 @@ test('should return response on error', async (t) => {
         {
           uri: 'http://json25.test/entries/error',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'error', ret.error)
-  t.is(ret.error, 'Server returned 500 for http://json25.test/entries/error')
-  t.is(ret.data, JSON.stringify({ error: 'No time to deal with this' }))
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
+  assert.equal(
+    ret.error,
+    'Server returned 500 for http://json25.test/entries/error',
+  )
+  assert.equal(ret.data, JSON.stringify({ error: 'No time to deal with this' }))
 })
 
-test('should return error on request error', async (t) => {
+test('should return error on request error', async () => {
   nock('http://json7.test')
     .get('/entries/ent1')
     .replyWithError('An awful error')
@@ -500,17 +523,17 @@ test('should return error on request error', async (t) => {
         {
           uri: 'http://json7.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'error', ret.error)
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
 })
 
-test('should respond with badrequest on 400', async (t) => {
+test('should respond with badrequest on 400', async () => {
   nock('http://json8.test').put('/entries/ent1', '{}').reply(400, {})
   const action = {
     type: 'SET',
@@ -521,18 +544,18 @@ test('should respond with badrequest on 400', async (t) => {
         {
           uri: 'http://json8.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'badrequest', ret.error)
-  t.is(typeof ret.error, 'string')
+  assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
+  assert.equal(typeof ret.error, 'string')
 })
 
-test('should respond with timeout on 408', async (t) => {
+test('should respond with timeout on 408', async () => {
   nock('http://json9.test').put('/entries/ent1', '{}').reply(408, {})
   const action = {
     type: 'SET',
@@ -543,18 +566,40 @@ test('should respond with timeout on 408', async (t) => {
         {
           uri: 'http://json9.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'timeout', ret.error)
-  t.is(typeof ret.error, 'string')
+  assert.equal(ret.status, 'timeout', `Responded with '${ret.status}'`)
+  assert.equal(typeof ret.error, 'string')
 })
 
-test('should reject on 401 with auth', async (t) => {
+test('should respond with toomany on 429', async () => {
+  nock('http://json30.test').put('/entries/ent1', '{}').reply(429, {})
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data: '{}' },
+    meta: {
+      auth: {},
+      options: prepareOptions(
+        {
+          uri: 'http://json30.test/entries/ent1',
+        },
+        serviceId,
+      ),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  assert.equal(ret.status, 'toomany', `Responded with '${ret.status}'`)
+  assert.equal(typeof ret.error, 'string')
+})
+
+test('should reject on 401 with auth', async () => {
   nock('http://json10.test').put('/entries/ent1', '{}').reply(401, {})
   const action = {
     type: 'SET',
@@ -565,18 +610,18 @@ test('should reject on 401 with auth', async (t) => {
         {
           uri: 'http://json10.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'noaccess', ret.error)
-  t.is(ret.error, 'Not authorized (401)')
+  assert.equal(ret.status, 'noaccess', `Responded with '${ret.status}'`)
+  assert.equal(ret.error, 'Not authorized (401)')
 })
 
-test('should reject on 401 without auth', async (t) => {
+test('should reject on 401 without auth', async () => {
   nock('http://json11.test').put('/entries/ent1', '{}').reply(401, {})
   const action = {
     type: 'SET',
@@ -587,18 +632,18 @@ test('should reject on 401 without auth', async (t) => {
         {
           uri: 'http://json11.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'noaccess', ret.error)
-  t.is(ret.error, 'Service requires authentication (401)')
+  assert.equal(ret.status, 'noaccess', `Responded with '${ret.status}'`)
+  assert.equal(ret.error, 'Service requires authentication (401)')
 })
 
-test('should reject on 403 ', async (t) => {
+test('should reject on 403 ', async () => {
   nock('http://json12.test').put('/entries/ent1', '{}').reply(403, {})
   const action = {
     type: 'SET',
@@ -609,23 +654,23 @@ test('should reject on 403 ', async (t) => {
         {
           uri: 'http://json12.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'noaccess', ret.error)
-  t.is(ret.error, 'Service requires authentication (403)')
+  assert.equal(ret.status, 'noaccess', `Responded with '${ret.status}'`)
+  assert.equal(ret.error, 'Service requires authentication (403)')
 })
 
-test('should send with headers from endpoint', async (t) => {
+test('should send with headers from endpoint', async () => {
   nock('http://json13.test', {
     reqheaders: {
       authorization: 'The_token',
-      'If-Match': '3-871801934',
-      'user-agent': 'integreat-transporter-http/1.1',
+      'if-match': '3-871801934',
+      'user-agent': 'integreat-transporter-http/1.4',
     },
   })
     .put('/entries/ent1', '{}')
@@ -639,7 +684,7 @@ test('should send with headers from endpoint', async (t) => {
           headers: { 'If-Match': '3-871801934' },
           uri: 'http://json13.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -647,10 +692,10 @@ test('should send with headers from endpoint', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
-test('should support custom timeout in milliseconds', async (t) => {
+test('should support custom timeout in milliseconds', async () => {
   nock('http://json27.test')
     .put('/entries/ent1', '{}')
     .delay(500) // Delay the response for 500ms
@@ -665,18 +710,18 @@ test('should support custom timeout in milliseconds', async (t) => {
           uri: 'http://json27.test/entries/ent1',
           timeout: 1, // Set a very low timeout for making sure it times out
         },
-        serviceId
+        serviceId,
       ),
     },
   }
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'timeout', ret.error)
-  t.is(typeof ret.error, 'string')
+  assert.equal(ret.status, 'timeout', `Responded with '${ret.status}'`)
+  assert.equal(typeof ret.error, 'string')
 })
 
-test('should send with auth headers', async (t) => {
+test('should send with auth headers', async () => {
   nock('http://json14.test', {
     reqheaders: {
       authorization: 'The_token',
@@ -692,7 +737,7 @@ test('should send with auth headers', async (t) => {
         {
           uri: 'http://json14.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -700,10 +745,10 @@ test('should send with auth headers', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
-test('should not send with auth headers when authInData is true', async (t) => {
+test('should not send with auth headers when authInData is true', async () => {
   nock('http://json28.test', {
     reqheaders: {
       authorization: 'The_token',
@@ -720,7 +765,7 @@ test('should not send with auth headers when authInData is true', async (t) => {
           uri: 'http://json28.test/entries/ent1',
           authInData: true,
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -728,10 +773,11 @@ test('should not send with auth headers when authInData is true', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'error', ret.error) // An error here will tell us that the headers were not sent
+  // An error here will tell us that the headers were not sent
+  assert.equal(ret.status, 'error', `Responded with '${ret.status}'`)
 })
 
-test('should retrieve with headers from action', async (t) => {
+test('should retrieve with headers from action', async () => {
   nock('http://json15.test', {
     reqheaders: {
       authorization: 'The_token',
@@ -742,7 +788,7 @@ test('should retrieve with headers from action', async (t) => {
   })
     .put(
       '/entries/ent1',
-      '<?xml version="1.0" encoding="utf-8"?><soap:Envelope></soap:Envelope>'
+      '<?xml version="1.0" encoding="utf-8"?><soap:Envelope></soap:Envelope>',
     )
     .reply(200)
   const action = {
@@ -761,7 +807,7 @@ test('should retrieve with headers from action', async (t) => {
           headers: { 'If-Match': '3-871801934' },
           uri: 'http://json15.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'The_token' },
     },
@@ -769,10 +815,10 @@ test('should retrieve with headers from action', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
-test('should remove content-type header in GET requests', async (t) => {
+test('should remove content-type header in GET requests', async () => {
   nock('http://json24.test', {
     reqheaders: {
       'x-correlation-id': '1234567890',
@@ -794,7 +840,7 @@ test('should remove content-type header in GET requests', async (t) => {
         {
           uri: 'http://json24.test/entries/ent1',
         },
-        serviceId
+        serviceId,
       ),
       auth: null,
     },
@@ -802,10 +848,10 @@ test('should remove content-type header in GET requests', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
-test('should retrieve with auth params in querystring', async (t) => {
+test('should retrieve with auth params in querystring', async () => {
   nock('http://json16.test')
     .put('/entries/ent1', '{}')
     .query({
@@ -824,7 +870,7 @@ test('should retrieve with auth params in querystring', async (t) => {
           authAsQuery: true,
           queryParams: { order: 'desc' },
         },
-        serviceId
+        serviceId,
       ),
       auth: { Authorization: 'Th@&t0k3n', timestamp: '1554407539' },
     },
@@ -832,10 +878,62 @@ test('should retrieve with auth params in querystring', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'ok', ret.error)
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
 })
 
-test('should return error when no endpoint', async (t) => {
+test('should throttle calls when options has throttle settings', async () => {
+  const scope = nock('http://json29.test')
+    .get('/entries/ent1')
+    .times(4)
+    .reply(200, () => ({ id: 'ent1', timestamp: Date.now() }))
+  const options = prepareOptions(
+    {
+      uri: 'http://json29.test/entries/ent1',
+      throttle: {
+        limit: 2,
+        interval: 1000,
+      },
+    },
+    serviceId,
+  )
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', id: 'ent1' },
+    meta: {
+      options,
+    },
+  }
+
+  const conn = await connect(options, null, null) // We need to connect to get the throttle function
+  const ret0 = await send(action, conn)
+  const ret1 = await send(action, conn)
+  const ret2 = await send(action, conn)
+  const ret3 = await send(action, conn)
+
+  assert.equal(ret0.status, 'ok', `Responded with '${ret0.status}'`)
+  assert.equal(ret1.status, 'ok', `Responded with '${ret1.status}'`)
+  assert.equal(ret2.status, 'ok', `Responded with '${ret2.status}'`)
+  assert.equal(ret3.status, 'ok', `Responded with '${ret3.status}'`)
+  const timestamp0 = extractTimestamp(ret0.data)
+  const timestamp1 = extractTimestamp(ret1.data)
+  const timestamp2 = extractTimestamp(ret2.data)
+  const timestamp3 = extractTimestamp(ret3.data)
+  assert(
+    timestamp1 - timestamp0 < 1000,
+    'Should have less than 1000 ms between the first and second call',
+  )
+  assert(
+    timestamp2 - timestamp0 > 900 && timestamp2 - timestamp0 < 1100, // We give the throttle function a slack of 100 ms in both directions
+    `Should have around 1000 ms between the first and third call, was ${timestamp2 - timestamp0}`,
+  )
+  assert(
+    timestamp3 - timestamp2 < 1000,
+    'Should have less than 1000 ms between the third and fourth call',
+  )
+  assert(scope.isDone())
+})
+
+test('should return error when no endpoint', async () => {
   const action = {
     type: 'GET',
     payload: { type: 'entry' },
@@ -844,10 +942,10 @@ test('should return error when no endpoint', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'badrequest', ret.error)
+  assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
 })
 
-test('should return error when no uri', async (t) => {
+test('should return error when no uri', async () => {
   const action = {
     type: 'GET',
     payload: { type: 'entry' },
@@ -858,7 +956,32 @@ test('should return error when no uri', async (t) => {
 
   const ret = await send(action, null)
 
-  t.is(ret.status, 'badrequest', ret.error)
+  assert.equal(ret.status, 'badrequest', `Responded with '${ret.status}'`)
 })
 
-test.todo('should retry')
+test('should honor noLogging', async () => {
+  // Note: We don't really test this, as logging is done with DEBUG, that don't
+  // log in tests. But we verify that nothing breaks, at least
+  const data = 'Plain text'
+  const scope = nock('http://json31.test', {
+    reqheaders: { 'Content-Type': 'text/plain' },
+  })
+    .put('/entries/ent1', data)
+    .reply(200, { id: 'ent1' })
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data },
+    meta: {
+      options: prepareOptions(
+        { uri: 'http://json31.test/entries/ent1' },
+        serviceId,
+      ),
+      noLogging: true,
+    },
+  }
+
+  const ret = await send(action, null)
+
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
+})

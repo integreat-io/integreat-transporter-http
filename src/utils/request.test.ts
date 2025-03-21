@@ -1,11 +1,13 @@
-import test from 'ava'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 import type { IncomingMessage } from 'http'
 
 import { actionFromRequest } from './request.js'
 
 // Tests
 
-test('should lowercase host when creating action from request', async (t) => {
+test('should lowercase host when creating action from request', async () => {
+  const port = 9060
   const request = {
     method: 'GET',
     url: '/ENTRIES?filter=all&format=json',
@@ -26,7 +28,7 @@ test('should lowercase host when creating action from request', async (t) => {
     payload: {
       method: 'GET',
       hostname: 'localhost',
-      port: 9030,
+      port,
       path: '/ENTRIES',
       queryParams: {
         filter: 'all',
@@ -41,7 +43,50 @@ test('should lowercase host when creating action from request', async (t) => {
     meta: {},
   }
 
-  const ret = await actionFromRequest(request, 9030)
+  const ret = await actionFromRequest(request, port)
 
-  t.deepEqual(ret, expectedAction)
+  assert.deepEqual(ret, expectedAction)
+})
+
+test('should treat query params ending in brackets as an array', async () => {
+  const port = 9061
+  const request = {
+    method: 'GET',
+    url: '/entries?ids[]=ent1&ids[]=ent2&archived=true&pageSize=100',
+    headers: {
+      host: 'localhost',
+      'content-type': 'application/json',
+    },
+    [Symbol.asyncIterator]() {
+      return {
+        next() {
+          return Promise.resolve({ value: undefined, done: true })
+        },
+      }
+    },
+  } as IncomingMessage
+  const expectedAction = {
+    type: 'GET',
+    payload: {
+      method: 'GET',
+      hostname: 'localhost',
+      port,
+      path: '/entries',
+      queryParams: {
+        ids: ['ent1', 'ent2'],
+        archived: 'true',
+        pageSize: '100',
+      },
+      contentType: 'application/json',
+      headers: {
+        'content-type': 'application/json',
+        host: 'localhost',
+      },
+    },
+    meta: {},
+  }
+
+  const ret = await actionFromRequest(request, port)
+
+  assert.deepEqual(ret, expectedAction)
 })

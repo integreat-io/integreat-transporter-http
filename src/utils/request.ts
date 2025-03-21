@@ -9,6 +9,20 @@ async function readDataFromRequest(request: http.IncomingMessage) {
   return Buffer.concat(buffers).toString()
 }
 
+function searchParamsToObject(searchParams: URLSearchParams) {
+  const queryParams: Record<string, string | string[]> = {}
+  for (const [key, value] of searchParams.entries()) {
+    if (key.endsWith('[]')) {
+      const bareKey = key.slice(0, -2)
+      const arr = queryParams[bareKey] ?? [] // eslint-disable-line security/detect-object-injection
+      queryParams[bareKey] = [...arr, value] // eslint-disable-line security/detect-object-injection
+    } else {
+      queryParams[key] = value // eslint-disable-line security/detect-object-injection
+    }
+  }
+  return queryParams
+}
+
 function parseUrl(request: http.IncomingMessage) {
   if (request.url && request.headers.host) {
     const parts = new URL(request.url, `http://${request.headers.host}`)
@@ -16,7 +30,7 @@ function parseUrl(request: http.IncomingMessage) {
       parts.hostname,
       parts.port && Number.parseInt(parts.port, 10),
       parts.pathname,
-      Object.fromEntries(parts.searchParams.entries()),
+      searchParamsToObject(parts.searchParams),
     ] as const
   }
 
