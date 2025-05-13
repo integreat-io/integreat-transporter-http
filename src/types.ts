@@ -27,6 +27,10 @@ export interface ServiceOptions extends Record<string, unknown> {
   timeout?: number
   authAsQuery?: boolean
   authInData?: boolean
+  rateLimit?: {
+    retry: number
+    maxDelay?: number
+  }
   throttle?: {
     limit: number
     interval: number

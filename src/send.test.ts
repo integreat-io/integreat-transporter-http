@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { setTimeout } from 'node:timers/promises'
 import nock from 'nock'
 import transporter from './index.js'
 import { isObject } from './utils/is.js'
@@ -931,6 +932,146 @@ test('should throttle calls when options has throttle settings', async () => {
     'Should have less than 1000 ms between the third and fourth call',
   )
   assert(scope.isDone())
+})
+
+test('should retry on 429 response when rateLimit settings are given', async () => {
+  const scope = nock('http://json32.test')
+    .get('/entries/ent1')
+    .reply(429, '', { 'retry-after': '1' })
+    .get('/entries/ent1')
+    .reply(200, () => ({ id: 'ent1', timestamp: Date.now() }))
+  const options = prepareOptions(
+    {
+      uri: 'http://json32.test/entries/ent1',
+      rateLimit: {
+        retry: 1,
+        maxDelay: 5,
+      },
+    },
+    serviceId,
+  )
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', id: 'ent1' },
+    meta: {
+      options,
+    },
+  }
+
+  const p = send(action, null)
+  await setTimeout(200)
+  const wasDoneBefore = scope.isDone() // Make sure that we are waiting after 200 ms
+  await setTimeout(810)
+  const wasDoneAfter = scope.isDone() // Make sure that we are done after 1000+ ms
+  const ret = await p
+
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.equal(wasDoneBefore, false)
+  assert.equal(wasDoneAfter, true)
+})
+
+test('should retry two times on 429 response when rateLimit settings are given', async () => {
+  const scope = nock('http://json33.test')
+    .get('/entries/ent1')
+    .times(2)
+    .reply(429, '', { 'retry-after': '1' })
+    .get('/entries/ent1')
+    .reply(200, () => ({ id: 'ent1', timestamp: Date.now() }))
+  const options = prepareOptions(
+    {
+      uri: 'http://json33.test/entries/ent1',
+      rateLimit: {
+        retry: 2,
+      },
+    },
+    serviceId,
+  )
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', id: 'ent1' },
+    meta: {
+      options,
+    },
+  }
+
+  const p = send(action, null)
+  await setTimeout(200)
+  const wasDoneBefore = scope.isDone() // Make sure that we are waiting after 200 ms
+  await setTimeout(810)
+  const wasDoneBetween = scope.isDone() // Make sure that we are done after 1000+ ms
+  await setTimeout(1010)
+  const wasDoneAfter = scope.isDone() // Make sure that we are done after 2000+ ms
+  const ret = await p
+
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert.equal(wasDoneBefore, false)
+  assert.equal(wasDoneBetween, false)
+  assert.equal(wasDoneAfter, true)
+})
+
+test('should return error response after the given number of rate limit retries', async () => {
+  const scope = nock('http://json32.test')
+    .get('/entries/ent1')
+    .times(2)
+    .reply(429, '', { 'retry-after': '1' })
+  const options = prepareOptions(
+    {
+      uri: 'http://json32.test/entries/ent1',
+      rateLimit: {
+        retry: 1,
+      },
+    },
+    serviceId,
+  )
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', id: 'ent1' },
+    meta: {
+      options,
+    },
+  }
+
+  const p = send(action, null)
+  await setTimeout(200)
+  const wasDoneBefore = scope.isDone() // Make sure that we are waiting after 200 ms
+  await setTimeout(810)
+  const wasDoneAfter = scope.isDone() // Make sure that we are done after 1000+ ms
+  const ret = await p
+
+  assert.equal(ret.status, 'toomany', `Responded with '${ret.status}'`)
+  assert.equal(wasDoneBefore, false)
+  assert.equal(wasDoneAfter, true)
+})
+
+test('should not retry on rate limiting when retry-after is longer than the given maxDelay', async () => {
+  const scope = nock('http://json32.test')
+    .get('/entries/ent1')
+    .reply(429, '', { 'retry-after': '5' })
+  const options = prepareOptions(
+    {
+      uri: 'http://json32.test/entries/ent1',
+      rateLimit: {
+        retry: 1,
+        maxDelay: 1,
+      },
+    },
+    serviceId,
+  )
+  const action = {
+    type: 'GET',
+    payload: { type: 'entry', id: 'ent1' },
+    meta: {
+      options,
+    },
+  }
+
+  const p = send(action, null)
+  await setTimeout(200)
+  const wasDone = scope.isDone() // Make sure that we are waiting after 200 ms
+  const ret = await p
+
+  assert.equal(ret.status, 'toomany', `Responded with '${ret.status}'`)
+  assert.equal(wasDone, true)
 })
 
 test('should return error when no endpoint', async () => {

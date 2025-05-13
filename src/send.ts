@@ -1,10 +1,10 @@
 import debugFn from 'debug'
-import got, { Response as GotResponse, Options as GotOptions } from 'got'
+import got, { Response as GotResponse, OptionsOfTextResponseBody } from 'got'
 import queryString from 'query-string'
 import { createResponse, createResponseWithError } from './utils/response.js'
 import { isDate } from './utils/is.js'
 import type { Action, Response, Headers } from 'integreat'
-import { ServiceOptions, Connection } from './types.js'
+import type { ServiceOptions, Connection } from './types.js'
 
 type URLSearchArray = readonly [string, string][]
 type KeyVal = [string, string]
@@ -18,7 +18,7 @@ function prepareLogUrl(url: string, query: URLSearchParams) {
   return querystring ? `${bareUrl}?${querystring}` : bareUrl
 }
 
-const logRequest = (request: Partial<GotOptions>, noLogging: boolean) => {
+const logRequest = (request: OptionsOfTextResponseBody, noLogging: boolean) => {
   if (!noLogging) {
     const message = `Sending ${request.method} ${request.url}`
     debug('%s: %o %s', message, request.headers, request.body)
@@ -27,7 +27,7 @@ const logRequest = (request: Partial<GotOptions>, noLogging: boolean) => {
 
 const logResponse = (
   response: Response,
-  { url, method }: Partial<GotOptions>,
+  { url, method }: OptionsOfTextResponseBody,
   noLogging: boolean,
 ) => {
   if (!noLogging) {
@@ -125,27 +125,52 @@ const selectMethod = (options?: ServiceOptions, data?: unknown) =>
 const prepareBody = (data: unknown) =>
   typeof data === 'string' || data === undefined ? data : JSON.stringify(data)
 
+function retryFromOptions(
+  options?: ServiceOptions,
+): OptionsOfTextResponseBody['retry'] {
+  const { retry, maxDelay } = options?.rateLimit ?? {}
+  const retryNum = typeof retry === 'string' ? parseInt(retry) : retry
+  const maxDelayNum =
+    typeof maxDelay === 'string' ? parseInt(maxDelay) : maxDelay
+  if (typeof retryNum === 'number' && !Number.isNaN(retryNum)) {
+    return {
+      limit: retryNum,
+      maxRetryAfter:
+        typeof maxDelayNum === 'number' && !Number.isNaN(maxDelayNum)
+          ? maxDelayNum * 1000
+          : undefined,
+      statusCodes: [429],
+      methods: ['GET', 'HEAD', 'OPTIONS'],
+    }
+  } else {
+    return { limit: 0 }
+  }
+}
+
 function optionsFromEndpoint({
   payload,
   meta: { options, auth } = {},
-}: Action) {
+}: Action): [string | undefined, Omit<OptionsOfTextResponseBody, 'url'>] {
   const method = selectMethod(options, payload.data)
-  return {
-    prefixUrl: typeof options?.baseUri === 'string' ? options.baseUri : '',
-    url: generateUrl(options),
-    searchParams: generateQueryParams(options, auth),
-    method,
-    body: method === 'GET' ? undefined : prepareBody(payload.data),
-    headers: removeContentTypeIf(
-      createHeaders(options, payload.data, payload.headers, auth),
-      method === 'GET',
-    ),
-    retry: { limit: 0 },
-    throwHttpErrors: false,
-    timeout: {
-      response: typeof options?.timeout === 'number' ? options.timeout : 120000,
+  return [
+    generateUrl(options),
+    {
+      prefixUrl: typeof options?.baseUri === 'string' ? options.baseUri : '',
+      searchParams: generateQueryParams(options, auth),
+      method,
+      body: method === 'GET' ? undefined : prepareBody(payload.data),
+      headers: removeContentTypeIf(
+        createHeaders(options, payload.data, payload.headers, auth),
+        method === 'GET',
+      ),
+      retry: retryFromOptions(options),
+      throwHttpErrors: false,
+      timeout: {
+        response:
+          typeof options?.timeout === 'number' ? options.timeout : 120000,
+      },
     },
-  }
+  ]
 }
 
 const isOkResponse = (gotResponse: GotResponse) =>
@@ -183,7 +208,7 @@ export default async function send(
   action: Action,
   connection: Connection | null,
 ): Promise<Response> {
-  const { url, ...options } = optionsFromEndpoint(action)
+  const [url, options] = optionsFromEndpoint(action)
 
   if (!url) {
     return createResponse(
@@ -195,7 +220,7 @@ export default async function send(
   }
 
   const logOptions = {
-    url: prepareLogUrl(url, options.searchParams),
+    url: prepareLogUrl(url, options.searchParams as URLSearchParams),
     ...options,
   }
   const noLogging = !!action.meta?.noLogging
@@ -208,7 +233,7 @@ export default async function send(
 
   try {
     logRequest(logOptions, noLogging)
-    const gotResponse = await got<string>(url, options)
+    const gotResponse = await got(url, options)
     const response = responseFromGotResponse(gotResponse, url, action)
     logResponse(response, logOptions, noLogging)
     return response
