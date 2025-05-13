@@ -40,13 +40,24 @@ const logResponse = (
   }
 }
 
-const removeLeadingSlashIf = (uri: string | undefined, doRemove: boolean) =>
-  doRemove && typeof uri === 'string' && uri.startsWith('/')
-    ? uri.slice(1)
-    : uri
-
-const generateUrl = ({ uri, baseUri }: ServiceOptions = {}) =>
-  removeLeadingSlashIf(uri, !!baseUri)
+/**
+ * Combine `baseUri` and `uri` into one url.
+ */
+function generateUrl({ uri, baseUri }: ServiceOptions = {}) {
+  if (baseUri) {
+    if (uri && uri[0] === '/') {
+      return baseUri.endsWith('/')
+        ? `${baseUri}${uri.slice(1)}`
+        : `${baseUri}${uri}`
+    } else if (uri) {
+      return baseUri.endsWith('/') ? `${baseUri}${uri}` : `${baseUri}/${uri}`
+    } else {
+      return baseUri
+    }
+  } else {
+    return uri
+  }
+}
 
 function extractQueryParamsFromUri(uri?: string) {
   if (typeof uri === 'string') {
@@ -155,7 +166,6 @@ function optionsFromEndpoint({
   return [
     generateUrl(options),
     {
-      prefixUrl: typeof options?.baseUri === 'string' ? options.baseUri : '',
       searchParams: generateQueryParams(options, auth),
       method,
       body: method === 'GET' ? undefined : prepareBody(payload.data),

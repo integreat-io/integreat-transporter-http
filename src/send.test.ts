@@ -236,6 +236,32 @@ test('should support base url', async () => {
   assert(scope.isDone())
 })
 
+test('should handle / uri and baseUri', async () => {
+  const scope = nock('http://json34.test', {
+    reqheaders: { 'Content-Type': 'text/plain' },
+  })
+    .put('/entries/')
+    .reply(200, { id: 'ent1' })
+  const action = {
+    type: 'SET',
+    payload: { type: 'entry', data: '{"id":"ent1","title":"Entry 1"}' },
+    meta: {
+      options: prepareOptions(
+        {
+          baseUri: 'http://json34.test/entries',
+          uri: '/',
+        },
+        serviceId,
+      ),
+    },
+  }
+
+  const ret = await send(action, null)
+
+  assert.equal(ret.status, 'ok', `Responded with '${ret.status}'`)
+  assert(scope.isDone())
+})
+
 test('should set query params from options', async () => {
   const scope = nock('http://json20.test')
     .get('/entries')
@@ -961,7 +987,7 @@ test('should retry on 429 response when rateLimit settings are given', async () 
   const p = send(action, null)
   await setTimeout(200)
   const wasDoneBefore = scope.isDone() // Make sure that we are waiting after 200 ms
-  await setTimeout(810)
+  await setTimeout(820)
   const wasDoneAfter = scope.isDone() // Make sure that we are done after 1000+ ms
   const ret = await p
 
@@ -997,9 +1023,9 @@ test('should retry two times on 429 response when rateLimit settings are given',
   const p = send(action, null)
   await setTimeout(200)
   const wasDoneBefore = scope.isDone() // Make sure that we are waiting after 200 ms
-  await setTimeout(810)
+  await setTimeout(820)
   const wasDoneBetween = scope.isDone() // Make sure that we are done after 1000+ ms
-  await setTimeout(1010)
+  await setTimeout(1020)
   const wasDoneAfter = scope.isDone() // Make sure that we are done after 2000+ ms
   const ret = await p
 

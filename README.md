@@ -53,7 +53,7 @@ Example source configuration:
 Available options for action meta options:
 
 - `uri`: The request uri
-- `baseUri`: Used as a base for the `uri`, if provided
+- `baseUri`: Used as a base for the `uri`, when provided
 - `queryParams`: An object of query parameters to use for the request. The
   keys and values of the object will be keys and values in the query string.
   Value will be forced to strings
