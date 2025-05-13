@@ -6,7 +6,7 @@ over http/https. Also contains [an authenticator](#authenticator) for http
 specific authentication.
 
 [![npm Version](https://img.shields.io/npm/v/integreat-transporter-http.svg)](https://www.npmjs.com/package/integreat-transporter-http)
-[![Maintainability](https://api.codeclimate.com/v1/badges/6abe9cf4601fe08a18b8/maintainability)](https://codeclimate.com/github/integreat-io/integreat-transporter-http/maintainability)
+[![Maintainability](https://qlty.sh/badges/29be9d4d-d00a-4b5b-8a33-7652114ae160/maintainability.svg)](https://qlty.sh/gh/integreat-io/projects/integreat-transporter-http)
 
 ## Getting started
 
