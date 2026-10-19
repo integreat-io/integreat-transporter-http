@@ -23,9 +23,20 @@ function searchParamsToObject(searchParams: URLSearchParams) {
   return queryParams
 }
 
+function createUrl(url: string, host: string) {
+  try {
+    return new URL(url, `http://${host}`)
+  } catch {
+    return undefined // Invalid url
+  }
+}
+
 function parseUrl(request: http.IncomingMessage) {
   if (request.url && request.headers.host) {
-    const parts = new URL(request.url, `http://${request.headers.host}`)
+    const parts = createUrl(request.url, request.headers.host)
+    if (!parts) {
+      return undefined
+    }
     return [
       parts.hostname,
       parts.port && Number.parseInt(parts.port, 10),
@@ -55,8 +66,12 @@ function contentTypeFromRequest(request: http.IncomingMessage) {
 export async function actionFromRequest(
   request: http.IncomingMessage,
   incomingPort: number,
-): Promise<Action> {
-  const [hostname, port, path, queryParams] = parseUrl(request)
+): Promise<Action | undefined> {
+  const parts = parseUrl(request)
+  if (!parts) {
+    return undefined
+  }
+  const [hostname, port, path, queryParams] = parts
   const data = await readDataFromRequest(request)
 
   // Note: We make `host` and `path` lowercase, as these will be compared with

@@ -49,6 +49,21 @@ const removeIdentAndSourceService = ({
 
 const portHandlers = new Map<number, Set<HandlerCase>>()
 
+// We use a raw http request here, as got will normalize the url
+const rawRequest = (port: number, path: string, host = 'localhost') =>
+  new Promise<{ statusCode?: number; body: string }>((resolve, reject) => {
+    const req = http.request(
+      { port, path, method: 'GET', headers: { host } },
+      (res) => {
+        let body = ''
+        res.on('data', (chunk) => (body += chunk))
+        res.on('end', () => resolve({ statusCode: res.statusCode, body }))
+      },
+    )
+    req.on('error', reject)
+    req.end()
+  })
+
 // Tests
 
 test('should return ok on listen and set handler cases on connection', async (t) => {
@@ -721,6 +736,88 @@ test('should respond with 400 on badrequest', async (t) => {
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
   assert.equal(response.statusCode, 400)
+})
+
+test('should respond with 400 on invalid url', async (t) => {
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: [] })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: [], path: ['/'], port: 9052 },
+  }
+  t.after(() => connection.server.close())
+
+  const ret = await listen(portHandlers)(dispatch, connection, authenticate)
+  const response = await rawRequest(9052, '//')
+
+  assert.deepEqual(ret, { status: 'ok' })
+  assert.equal(response.statusCode, 400)
+  assert.equal(
+    response.body,
+    JSON.stringify({ status: 'badrequest', error: 'Invalid url' }),
+  )
+  assert.equal(dispatch.callCount, 0)
+  assert.equal(connection.server.listening, true)
+})
+
+test('should respond with 400 on invalid host header', async (t) => {
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: [] })
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: [], path: ['/'], port: 9053 },
+  }
+  t.after(() => connection.server.close())
+
+  const ret = await listen(portHandlers)(dispatch, connection, authenticate)
+  const response = await rawRequest(9053, '/entries', 'local host')
+
+  assert.deepEqual(ret, { status: 'ok' })
+  assert.equal(response.statusCode, 400)
+  assert.equal(dispatch.callCount, 0)
+})
+
+test('should respond with 500 when dispatch throws', async (t) => {
+  const dispatch = sinon.stub().rejects(new Error('Boom'))
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9054 },
+  }
+  t.after(() => connection.server.close())
+  const url = 'http://localhost:9054/entries'
+
+  const ret = await listen(portHandlers)(dispatch, connection, authenticate)
+  const response1 = await got(url, options)
+  const response2 = await got(url, options)
+
+  assert.deepEqual(ret, { status: 'ok' })
+  assert.equal(response1.statusCode, 500)
+  assert.equal(
+    response1.body,
+    JSON.stringify({ status: 'error', error: 'Internal server error' }),
+  )
+  assert.equal(response2.statusCode, 500)
+  assert.equal(dispatch.callCount, 2)
+})
+
+test('should respond with 500 when authenticate throws', async (t) => {
+  const dispatch = sinon.stub().resolves({ status: 'ok', data: [] })
+  const authenticate = sinon.stub().rejects(new Error('Boom'))
+  const connection = {
+    status: 'ok',
+    server: http.createServer(),
+    incoming: { host: ['localhost'], path: ['/entries'], port: 9055 },
+  }
+  t.after(() => connection.server.close())
+  const url = 'http://localhost:9055/entries'
+
+  const ret = await listen(portHandlers)(dispatch, connection, authenticate)
+  const response = await got(url, options)
+
+  assert.deepEqual(ret, { status: 'ok' })
+  assert.equal(response.statusCode, 500)
+  assert.equal(dispatch.callCount, 0)
 })
 
 test('should respond with 401 on autherror', async (t) => {

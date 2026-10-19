@@ -90,3 +90,47 @@ test('should treat query params ending in brackets as an array', async () => {
 
   assert.deepEqual(ret, expectedAction)
 })
+
+test('should return undefined when url is invalid', async () => {
+  const port = 9062
+  const request = {
+    method: 'GET',
+    url: '//',
+    headers: {
+      host: 'localhost',
+    },
+    [Symbol.asyncIterator]() {
+      return {
+        next() {
+          return Promise.resolve({ value: undefined, done: true })
+        },
+      }
+    },
+  } as IncomingMessage
+
+  const ret = await actionFromRequest(request, port)
+
+  assert.equal(ret, undefined)
+})
+
+test('should return undefined when host header is invalid', async () => {
+  const port = 9063
+  const request = {
+    method: 'GET',
+    url: '/entries',
+    headers: {
+      host: 'local host',
+    },
+    [Symbol.asyncIterator]() {
+      return {
+        next() {
+          return Promise.resolve({ value: undefined, done: true })
+        },
+      }
+    },
+  } as IncomingMessage
+
+  const ret = await actionFromRequest(request, port)
+
+  assert.equal(ret, undefined)
+})

@@ -198,33 +198,67 @@ async function authAndPrepareAction(
     : lowerCaseActionPath(authenticatedAction)
 }
 
-const createHandler = (ourServices: Set<HandlerCase>, incomingPort: number) =>
-  async function handleIncoming(
-    req: http.IncomingMessage,
-    res: http.ServerResponse,
-  ) {
-    const action = await actionFromRequest(req, incomingPort)
-    debug(
-      `Incoming action: ${action.type} ${action.payload.method} ${action.payload.path} ${action.payload.queryParams} ${action.payload.contentType}`,
-    )
-    debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
-
-    const handleCase = findMatchingHandlerCase(ourServices, action)
-    if (!handleCase || !handleCase.dispatch || !handleCase.authenticate) {
-      // No handle case matches, return 404
-      res.writeHead(404)
-      res.end()
-      return
+const respondWithError = (res: http.ServerResponse) =>
+  function respondWithError(error: unknown) {
+    debug(`Error handling incoming request: ${error}`)
+    if (res.headersSent) {
+      res.end() // Too late to change the status code
+    } else {
+      respond(
+        res,
+        500,
+        JSON.stringify({ status: 'error', error: 'Internal server error' }),
+      )
     }
-    const { options, dispatch } = handleCase
+  }
 
-    const incomingAction = await authAndPrepareAction(action, handleCase)
-    const response = await dispatch(incomingAction)
-    const responseData = dataFromResponse(response)
-    const statusCode = statusCodeFromResponse(response)
-    const headers = getHeadersAndSetAuthHeaders(response, options)
+async function handleIncoming(
+  ourServices: Set<HandlerCase>,
+  incomingPort: number,
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+) {
+  const action = await actionFromRequest(req, incomingPort)
+  if (!action) {
+    debug(`Incoming request with invalid url: ${req.url}`)
+    respond(
+      res,
+      400,
+      JSON.stringify({ status: 'badrequest', error: 'Invalid url' }),
+    )
+    return
+  }
+  debug(
+    `Incoming action: ${action.type} ${action.payload.method} ${action.payload.path} ${action.payload.queryParams} ${action.payload.contentType}`,
+  )
+  debugHeaders(`Incoming headers: ${JSON.stringify(req.headers)}`)
 
-    respond(res, statusCode, responseData, headers)
+  const handleCase = findMatchingHandlerCase(ourServices, action)
+  if (!handleCase || !handleCase.dispatch || !handleCase.authenticate) {
+    // No handle case matches, return 404
+    res.writeHead(404)
+    res.end()
+    return
+  }
+  const { options, dispatch } = handleCase
+
+  const incomingAction = await authAndPrepareAction(action, handleCase)
+  const response = await dispatch(incomingAction)
+  const responseData = dataFromResponse(response)
+  const statusCode = statusCodeFromResponse(response)
+  const headers = getHeadersAndSetAuthHeaders(response, options)
+
+  respond(res, statusCode, responseData, headers)
+}
+
+// The http server ignores the promise returned from a request handler, so we
+// catch any error here to avoid unhandled rejections taking down the process.
+const createHandler =
+  (ourServices: Set<HandlerCase>, incomingPort: number) =>
+  (req: http.IncomingMessage, res: http.ServerResponse) => {
+    handleIncoming(ourServices, incomingPort, req, res).catch(
+      respondWithError(res),
+    )
   }
 
 function getErrorFromConnection(connection: Connection | null) {
