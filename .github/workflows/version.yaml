@@ -17,6 +17,11 @@ on:
         required: true
         type: boolean
 
+permissions:
+  contents: write # git push of the release branch and tag
+  pull-requests: write # gh pr create with reviewer
+  issues: write # gh label create
+
 jobs:
   create-pr:
     name: Create PR
