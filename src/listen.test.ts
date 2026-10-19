@@ -2,9 +2,10 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import sinon from 'sinon'
 import http from 'http'
-import got from 'got'
 import type { Action, Headers } from 'integreat'
 import type { Connection, HandlerCase } from './types.js'
+
+import { sendRequest } from './tests/helpers/request.js'
 
 import listen from './listen.js'
 
@@ -13,8 +14,6 @@ import listen from './listen.js'
 const options = {
   method: 'GET' as const,
   headers: { 'Content-Type': 'application/json' },
-  throwHttpErrors: false,
-  retry: { limit: 0 },
 }
 
 const authenticate = async () => ({
@@ -48,21 +47,6 @@ const removeIdentAndSourceService = ({
 })
 
 const portHandlers = new Map<number, Set<HandlerCase>>()
-
-// We use a raw http request here, as got will normalize the url
-const rawRequest = (port: number, path: string, host = 'localhost') =>
-  new Promise<{ statusCode?: number; body: string }>((resolve, reject) => {
-    const req = http.request(
-      { port, path, method: 'GET', headers: { host } },
-      (res) => {
-        let body = ''
-        res.on('data', (chunk) => (body += chunk))
-        res.on('end', () => resolve({ statusCode: res.statusCode, body }))
-      },
-    )
-    req.on('error', reject)
-    req.end()
-  })
 
 // Tests
 
@@ -134,7 +118,7 @@ test('should dispatch GET request as GET action and respond with response', asyn
   const expectedAuthentication = { status: 'granted' }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(authenticate.callCount, 1)
@@ -188,7 +172,7 @@ test('should dispatch POST request as SET action', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -218,7 +202,7 @@ test('should dispatch PUT request as SET action', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  await got(url, options)
+  await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -256,7 +240,7 @@ test('should dispatch OPTIONS request as GET action', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -302,7 +286,7 @@ test('should match the most specific path before a less specific', async (t) => 
 
   const ret0 = await listen(portHandlers)(dispatch, connection0, authenticate)
   const ret1 = await listen(portHandlers)(dispatch, connection1, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret0, { status: 'ok' })
   assert.deepEqual(ret1, { status: 'ok' })
@@ -349,7 +333,7 @@ test('should match to a hostname over non-hostname', async (t) => {
 
   const ret0 = await listen(portHandlers)(dispatch, connection0, authenticate)
   const ret1 = await listen(portHandlers)(dispatch, connection1, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret0, { status: 'ok' })
   assert.deepEqual(ret1, { status: 'ok' })
@@ -395,7 +379,7 @@ test('should lowercase host and path in dispatched action', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -442,7 +426,7 @@ test('should not lowercase path when caseSensitivePath is true', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -493,7 +477,7 @@ test('should dispatch other content-type', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -529,7 +513,7 @@ test('should stringify response data', async (t) => {
   const url = 'http://localhost:9006/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -557,7 +541,7 @@ test('should respond with response headers', async (t) => {
   }
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -582,10 +566,10 @@ test('should skip response headers with value undefined', async (t) => {
   }
   t.after(() => connection.server.close())
   const url = 'http://localhost:9028/entries'
-  const options = { retry: { limit: 0 }, throwHttpErrors: false }
+  const options = {}
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -615,7 +599,7 @@ test('should use content type from response headers', async (t) => {
   const options = {}
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -656,7 +640,7 @@ test('should call authenticate with authentication and action', async (t) => {
   const url = 'http://localhost:9035/entries?filter=all&format=json'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -683,7 +667,7 @@ test('should respond with 201 on queued', async (t) => {
   const url = 'http://localhost:9012/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -705,7 +689,7 @@ test('should respond with 500 on error', async (t) => {
   const url = 'http://localhost:9007/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -731,7 +715,7 @@ test('should respond with 400 on badrequest', async (t) => {
   const url = 'http://localhost:9008/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -748,7 +732,7 @@ test('should respond with 400 on invalid url', async (t) => {
   t.after(() => connection.server.close())
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await rawRequest(9052, '//')
+  const response = await sendRequest('http://localhost:9052//')
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response.statusCode, 400)
@@ -770,7 +754,9 @@ test('should respond with 400 on invalid host header', async (t) => {
   t.after(() => connection.server.close())
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await rawRequest(9053, '/entries', 'local host')
+  const response = await sendRequest('http://localhost:9053/entries', {
+    headers: { host: 'local host' },
+  })
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response.statusCode, 400)
@@ -788,8 +774,8 @@ test('should respond with 500 when dispatch throws', async (t) => {
   const url = 'http://localhost:9054/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response1 = await got(url, options)
-  const response2 = await got(url, options)
+  const response1 = await sendRequest(url, options)
+  const response2 = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response1.statusCode, 500)
@@ -813,7 +799,7 @@ test('should respond with 500 when authenticate throws', async (t) => {
   const url = 'http://localhost:9055/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response.statusCode, 500)
@@ -834,7 +820,7 @@ test('should respond with 401 on autherror', async (t) => {
   const url = 'http://localhost:9024/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -855,7 +841,7 @@ test('should respond with 403 on noaccess', async (t) => {
   const url = 'http://localhost:9009/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -884,7 +870,7 @@ test('should respond with 403 when authentication with Integreat fails', async (
   const expectedBody = responseData
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(authenticate.callCount, 1)
@@ -924,7 +910,7 @@ test('should respond with 401 when authentication with Integreat returns noacces
   const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.equal(authenticate.callCount, 1)
   assert.equal(response.statusCode, 401)
@@ -966,7 +952,7 @@ test('should respond with 401 when a regular response has noaccess and reason no
   const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.equal(authenticate.callCount, 1)
   assert.equal(dispatch.callCount, 1)
@@ -1005,7 +991,7 @@ test('should respond with 403 when authentication with Integreat returns autherr
   const expectedHeader = 'Basic realm="Our wonderful API", charset="UTF-8"'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.equal(authenticate.callCount, 1)
   assert.equal(response.statusCode, 401)
@@ -1029,7 +1015,7 @@ test('should respond with 404 on notfound', async (t) => {
   const url = 'http://localhost:9010/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -1050,7 +1036,7 @@ test('should respond with 200 on noaction', async (t) => {
   const url = 'http://localhost:9013/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -1071,7 +1057,7 @@ test('should respond with 408 on timeout', async (t) => {
   const url = 'http://localhost:9011/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -1092,7 +1078,7 @@ test('should respond with 429 on toomany', async (t) => {
   const url = 'http://localhost:9039/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -1122,7 +1108,7 @@ test('should return 404 when path pattern does not match', async (t) => {
   const url = 'http://localhost:9014/unknown'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 0)
@@ -1141,7 +1127,7 @@ test('should accept url with different casing than path pattern', async (t) => {
   const url = 'http://localhost:9029/Entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 1)
@@ -1163,7 +1149,7 @@ test('should return 404 when host pattern does not match', async (t) => {
   const url = 'http://localhost:9015/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(dispatch.callCount, 0)
@@ -1186,7 +1172,7 @@ test('should dispatch when path pattern is root', async (t) => {
   const url = 'http://localhost:9016/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response.statusCode, 200)
@@ -1208,7 +1194,7 @@ test('should dispatch when no path pattern', async (t) => {
   const url = 'http://localhost:9017/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response.statusCode, 200)
@@ -1230,7 +1216,7 @@ test('should dispatch when no host pattern', async (t) => {
   const url = 'http://localhost:9018/entries'
 
   const ret = await listen(portHandlers)(dispatch, connection, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret, { status: 'ok' })
   assert.equal(response.statusCode, 200)
@@ -1257,7 +1243,7 @@ test('should dispatch to matching service', async () => {
 
   const ret0 = await listen(portHandlers)(dispatch0, connection0, authenticate)
   const ret1 = await listen(portHandlers)(dispatch1, connection1, authenticate)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret0, { status: 'ok' })
   assert.deepEqual(ret1, { status: 'ok' })
@@ -1297,7 +1283,7 @@ test('should keep port setups seperate', async (t) => {
   assert.equal(server0.listening, true)
   const ret1 = await listen(portHandlers)(dispatch1, connection1, authenticate)
   assert.equal(server1.listening, true)
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
 
   assert.deepEqual(ret0, { status: 'ok' })
   assert.deepEqual(ret1, { status: 'ok' })

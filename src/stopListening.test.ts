@@ -2,9 +2,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import sinon from 'sinon'
 import http from 'http'
-import got from 'got'
 import listen from './listen.js'
 import type { Connection, HandlerCase } from './types.js'
+import { sendRequest } from './tests/helpers/request.js'
 
 import stopListening from './stopListening.js'
 
@@ -18,8 +18,6 @@ const authenticate = async () => ({
 const options = {
   method: 'GET' as const,
   headers: { 'Content-Type': 'application/json' },
-  throwHttpErrors: false,
-  retry: { limit: 0 },
 }
 
 const portHandlers = new Map<number, Set<HandlerCase>>()
@@ -61,7 +59,7 @@ test('should stop listening', async (t) => {
   const handlerCases = portHandlers.get(port)
   const stopRet0 = await stopListening(portHandlers)(connection0)
   const caseCount0 = handlerCases?.size
-  const response = await got(url, options)
+  const response = await sendRequest(url, options)
   const stopRet1 = await stopListening(portHandlers)(connection1)
   const caseCount1 = handlerCases?.size
 
@@ -103,17 +101,17 @@ test('should stop listening and start again with new connection', async (t) => {
     authenticate,
   )
   const handlerCases = portHandlers.get(port)
-  const response0 = await got(url, options)
+  const response0 = await sendRequest(url, options)
   const stopRet0 = await stopListening(portHandlers)(connection0)
   const caseCount0 = handlerCases?.size
-  const response1 = await got(url, options)
+  const response1 = await sendRequest(url, options)
   const startRet1 = await listen(portHandlers)(
     dispatch,
     connection1,
     authenticate,
   )
   const caseCount1 = handlerCases?.size
-  const response2 = await got(url, options)
+  const response2 = await sendRequest(url, options)
   const stopRet1 = await stopListening(portHandlers)(connection1)
 
   assert.equal(caseCount0, 0, `First case count was ${caseCount0}`)
