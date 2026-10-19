@@ -6,7 +6,6 @@ import { isDate } from './utils/is.js'
 import type { Action, Response, Headers } from 'integreat'
 import type { ServiceOptions, Connection } from './types.js'
 
-type URLSearchArray = readonly [string, string][]
 type KeyVal = [string, string]
 
 const debug = debugFn('integreat:transporter:http')
@@ -82,16 +81,11 @@ const prepareQueryParams = (params: Record<string, unknown>) =>
   new URLSearchParams(
     Object.entries(params)
       .filter(([_key, value]) => value !== undefined)
-      .reduce(
-        (params, [key, value]) =>
-          Array.isArray(value)
-            ? [
-                ...params,
-                ...value.map((val) => [key, prepareQueryValue(val)] as KeyVal),
-              ]
-            : [...params, [key, prepareQueryValue(value)] as KeyVal],
-        [] as KeyVal[],
-      ) as URLSearchArray,
+      .flatMap(([key, value]) =>
+        (Array.isArray(value) ? value : [value]).map(
+          (val): KeyVal => [key, prepareQueryValue(val)],
+        ),
+      ),
   )
 
 const generateQueryParams = (

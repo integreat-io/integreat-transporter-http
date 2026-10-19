@@ -23,16 +23,17 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "test": "node --import tsx --no-deprecation --test --enable-source-maps --experimental-test-coverage --test-reporter node-test-reporter 'src/**/*.test.ts'",
+    "test": "node --import tsx --test --enable-source-maps --test-reporter node-test-reporter 'src/**/*.test.ts'",
     "test:legacy": "node --import tsx --no-deprecation --test --enable-source-maps src/*.test.ts src/**/*.test.ts",
     "test:inspect": "node --inspect node_modules/ava/profile.js",
     "test:watch": "npm run dev",
-    "dev": "node --import tsx --no-deprecation --test --enable-source-maps --test-reporter node-test-reporter --watch 'src/**/*.test.ts' || exit 0",
+    "dev": "node --import tsx --test --enable-source-maps --test-reporter node-test-reporter --watch \"src/**/*.test.ts\" || exit 0",
     "build": "tsc",
     "prepublishOnly": "npm run build",
-    "coverage": "c8 report",
-    "lint": "eslint --ext .ts src",
-    "verify": "npm run lint && npm test"
+    "lint": "eslint src",
+    "format": "prettier src/**/*.ts *.md -w",
+    "check-types": "tsc --noEmit --strict",
+    "verify": "npm run check-types && npm run lint && npm test"
   },
   "engines": {
     "node": ">= 18"
@@ -44,9 +45,9 @@
     "query-string": "^9.5.1"
   },
   "devDependencies": {
-    "@integreat/ts-dev-setup": "^8.2.1",
+    "@integreat/ts-dev-setup": "^10.0.0",
     "@types/debug": "^4.1.13",
-    "@types/node": "^20.19.43",
+    "@types/node": "^26.6.5",
     "@types/sinon": "^22.0.0",
     "integreat": "^1.7.1",
     "nock": "^15.0.3",
