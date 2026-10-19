@@ -9,6 +9,10 @@
   ],
   "author": "Kjell-Morten Bratsberg Thorsen <kjellmorten@integreat.io> (https://integreat.io/)",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/integreat-io/integreat-transporter-http.git"
+  },
   "type": "module",
   "exports": {
     ".": {
