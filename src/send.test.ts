@@ -725,8 +725,7 @@ test('should send with headers from endpoint', async () => {
 test('should support custom timeout in milliseconds', async () => {
   nock('http://json27.test')
     .put('/entries/ent1', '{}')
-    .delay(500) // Delay the response for 500ms
-    .reply(200, {})
+    .reply(async () => setTimeout(500, [200, {}])) // Delay the response headers for 500ms
   const action = {
     type: 'SET',
     payload: { type: 'entry', data: '{}' },
